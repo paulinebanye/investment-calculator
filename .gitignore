@@ -1,0 +1,16 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+*.txt
+# Desktop platform build files; without this Linux/Windows projects are incomplete.
+!CMakeLists.txt
