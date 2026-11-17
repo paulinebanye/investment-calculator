@@ -1,0 +1,11 @@
+{
+  "name": "investment-calculator",
+  "version": "1.0.0",
+  "description": "Premium Yield (PYI) and Enhanced Dollar (EDI) investment calculator",
+  "private": true,
+  "scripts": {
+    "start": "npx --yes http-server . -p 8080 -c-1",
+    "test": "node --test tests/logic.test.js",
+    "build": "node scripts/build-single.js"
+  }
+}

@@ -91,16 +91,16 @@ The calculator keeps one set of rules, applies them to every scenario, and shows
 
 # Architecture Overview
 
-The calculator is divided into four layers, all inside one HTML file.
+The calculator is divided into four layers, each in its own place.
 
 | Layer                | Responsibility                                                      |
 | -------------------- | ------------------------------------------------------------------- |
-| Input Panel          | Collects the principal, tenor, rate and payment options             |
-| Calculation Logic    | Pure functions for Premium Yield, replacement investment and EDI    |
-| Rendering Layer      | Builds the result cards, breakdown groups and payment schedule      |
-| Product Settings     | Holds the WHT rate, penalties, denominators and bonus configuration |
+| Input Panel          | `index.html`: collects the principal, tenor, rate and payment options |
+| Calculation Logic    | `js/logic.js`: pure functions for Premium Yield, replacement investment and EDI |
+| Rendering Layer      | `js/app.js`: builds the result cards, breakdown groups and payment schedule |
+| Product Settings     | Settings panel: WHT rate, penalties, denominators, bonus and minimums |
 
-The calculation logic sits between the `LOGIC-START` and `LOGIC-END` comments in the script. It has no dependencies, so it can be lifted out and tested on its own.
+`js/logic.js` has no dependencies and never touches the page, so the same file runs in the browser and in the Node tests.
 
 ---
 
@@ -111,6 +111,7 @@ The calculation logic sits between the `LOGIC-START` and `LOGIC-END` comments in
 | **HTML / CSS**            | Page structure and responsive layout       |
 | **Vanilla JavaScript**    | Calculation logic and rendering            |
 | **Google Fonts (Figtree)** | Typography, with a system-font fallback   |
+| **Node.js (optional)**    | Test runner and single-file build script   |
 | **Playwright**            | Browser checks used during verification    |
 | **LibreOffice**           | Recalculating the source workbook for tests |
 
@@ -119,42 +120,85 @@ The calculation logic sits between the `LOGIC-START` and `LOGIC-END` comments in
 # Repository Structure
 
 ```bash
-project-root/
+investment-calculator/
 │
-├── investment-calculator.html
+├── index.html              # Page markup only
 │
+├── css/
+│   └── styles.css          # All styling (light/dark, responsive layout)
+│
+├── js/
+│   ├── logic.js            # Calculation rules (no DOM, runs in browser and Node)
+│   └── app.js              # UI: reads the form, calls the logic, renders results
+│
+├── tests/
+│   └── logic.test.js       # Automated checks for the calculation rules
+│
+├── scripts/
+│   └── build-single.js     # Bundles everything into one HTML file
+│
+├── package.json
+├── .gitignore
 └── README.md
 ```
+
+Where to make a change:
+
+| Change                                         | File            |
+| ---------------------------------------------- | --------------- |
+| A calculation rule, rounding or a minimum      | `js/logic.js`   |
+| What is shown, labels, validation messages     | `js/app.js`     |
+| Form fields or page layout                     | `index.html`    |
+| Colours, spacing or responsive behaviour       | `css/styles.css` |
 
 ---
 
 # Project Setup
 
-There is no build step and no dependencies to install.
+There are no dependencies to install. Node 18 or later is only needed to run the tests and the build script.
 
 ## Clone the Repository
 
 ```bash
 git clone https://github.com/paulinebanye/<repo-name>
+cd <repo-name>
 ```
 
 ---
 
 ## Open the Calculator
 
-Open the file in any modern browser:
+Double-click `index.html`, or serve the folder locally:
 
 ```bash
-open investment-calculator.html
+npm start
 ```
 
-Or double-click `investment-calculator.html` in your file explorer.
+Then open `http://localhost:8080`.
+
+---
+
+## Run the Tests
+
+```bash
+npm test
+```
+
+---
+
+## Build a Single File
+
+```bash
+npm run build
+```
+
+This writes `dist/investment-calculator.html` with the CSS and JavaScript inlined. Use it for emailing the calculator or publishing it as one page.
 
 ---
 
 ## Host the Calculator
 
-Upload `investment-calculator.html` to any static host, for example GitHub Pages, Netlify or an internal web server.
+Upload the project folder (or `dist/investment-calculator.html`) to any static host, for example GitHub Pages, Netlify or an internal web server.
 
 Everything runs in the browser and no data is sent anywhere.
 
@@ -219,10 +263,13 @@ Open **Product settings** below the results to change:
 | Regular and flat day-count denominator | 365 and 360      |
 | Days per complete month                | 30               |
 | Bonus days per completed year          | 5                |
+| Minimum investment (PYI)               | ₦100,000         |
+| Minimum tenor, months (PYI)            | 3 months         |
+| Minimum tenor, days (PYI)              | 90 days          |
 | EDI WHT rate                           | 10% (placeholder) |
 | EDI early-liquidation penalty          | 0% (placeholder)  |
 
-Placeholder values are not stated in the product document. Confirm them against the product configuration.
+EDI has no minimums for now. Placeholder values are not stated in the product document. Confirm them against the product configuration.
 
 ---
 
@@ -257,7 +304,7 @@ The denominator is 365 for Regular and 360 for Flat.
 
 ## Gross, WHT and Net
 
-Amounts are worked out at full precision and rounded once:
+Amounts are worked out at full precision and rounded once, so net can differ by a kobo from gross minus WHT:
 
 ```text
 gross = round(daily interest × (base days + bonus days), 2)
@@ -350,7 +397,7 @@ net   = gross − WHT
 
 | Case                                         | Result                                                                                      |
 | -------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| PYI, ₦100,000 at 16%, 3 months, maturity     | Gross ₦3,945.21, WHT ₦394.52, net ₦3,550.69                                                  |
+| PYI, ₦100,000 at 16%, 3 months, maturity     | Gross ₦3,945.21, WHT ₦394.52, net ₦3,550.68                                                  |
 | PYI, ₦500,000,000 at 24%, 13 months, monthly | Gross ₦129,863,013.70, WHT ₦12,986,301.37, net ₦116,876,712.33, expected funds ₦508,876,712.31 |
 | EDI, $5,000 at 8%, 180 days, Regular         | Gross $197.26, WHT $19.73, net $177.53                                                      |
 
@@ -404,6 +451,9 @@ If a rule changes in the product spreadsheet, update the calculator and this REA
 | Tenor must be a multiple of 3 months        | Quarterly interest with a month tenor that is not a multiple of 3 |
 | Tenor must be a multiple of 6 months        | Biannual interest with a month tenor that is not a multiple of 6  |
 | Enter a principal above zero                | Principal is empty or zero                                |
+| Minimum investment is ₦100,000              | PYI principal is below the minimum                        |
+| Minimum tenor is 3 months                   | PYI month tenor is below the minimum                      |
+| Minimum tenor is 90 days                    | PYI day tenor is below the minimum                        |
 | Cash-out on part rollover is more than the rollover value | Cash-out is larger than the rollover value  |
 | Days elapsed is beyond the tenor            | EDI days elapsed exceeds the tenor, so accrual stops at maturity |
 
@@ -433,7 +483,13 @@ The checks covered:
 
 The page layout was also checked in a real browser at desktop and phone sizes.
 
-If the spreadsheet rules change, repeat this check before updating the calculator.
+The repository also includes automated tests for the worked examples, the minimums and the tenor rules:
+
+```bash
+npm test
+```
+
+If the spreadsheet rules change, repeat the spreadsheet check and add or update a test before updating the calculator.
 
 ---
 
@@ -449,9 +505,10 @@ Contributions are welcome.
 
 Before contributing:
 
-* Make changes in `investment-calculator.html`
-* Check the worked examples above after every change
+* Put calculation changes in `js/logic.js`, display changes in `js/app.js`, layout in `index.html` and styling in `css/styles.css`
+* Run `npm test` and check the worked examples above after every change
 * Keep rounding rules identical to the product spreadsheet
+* Add or update a test in `tests/logic.test.js` when a rule changes
 * Update this README when a calculation rule changes
 * Test on both a wide screen and a phone-sized window
 
