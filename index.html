@@ -1,0 +1,897 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Investment Calculator: Premium Yield and EDI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#eef1f6; --surface:#ffffff; --ink:#14213d; --muted:#5b6784; --line:#d9deea;
+  --accent:#1b4fd8; --accent-ink:#ffffff; --soft:#e4ebfb; --gain:#0b7a55; --warn:#a05a00; --warn-bg:#fff3dc;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1626; --surface:#18213a; --ink:#e8ecf7; --muted:#9aa6c4; --line:#2a3555;
+    --accent:#6b92ff; --accent-ink:#0f1626; --soft:#22305a; --gain:#4fd1a1; --warn:#ffcf85; --warn-bg:#3a2d12; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1626; --surface:#18213a; --ink:#e8ecf7; --muted:#9aa6c4; --line:#2a3555;
+  --accent:#6b92ff; --accent-ink:#0f1626; --soft:#22305a; --gain:#4fd1a1; --warn:#ffcf85; --warn-bg:#3a2d12; color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.5;font-variant-numeric:tabular-nums}
+.wrap{max-width:1500px;margin:0 auto;padding:24px 20px 48px}
+h1{font-size:clamp(1.5rem,3.2vw,2.1rem);line-height:1.15;margin:0 0 6px;font-weight:700;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:0 0 20px;max-width:62ch}
+.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;align-items:start}
+.head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 24px;margin-bottom:16px}
+.prod{width:100%;max-width:520px}
+@media (min-width:900px){
+  html,body{height:100%}
+  .wrap{height:100%;max-width:1600px;display:flex;flex-direction:column;padding:12px 20px 14px}
+  .head{margin-bottom:12px;flex:none}
+  .head h1{font-size:1.35rem;margin:0}
+  .head .sub{display:none}
+  .prod{width:380px;max-width:none}
+  .prod span{padding:8px 6px}
+  .grid{flex:1;min-height:0;grid-template-columns:minmax(330px,380px) minmax(0,1fr);gap:20px;align-items:stretch}
+  .panel.inputs{padding:14px 16px;height:100%;overflow-y:auto;overscroll-behavior:contain}
+  .inputs>h2{display:none}
+  .inputs .field{margin-bottom:10px}
+  .inputs .field>label,.inputs .field>.lbl{font-size:.8rem;margin-bottom:4px}
+  .inputs input[type=text],.inputs input[type=number]{padding:7px 10px}
+  .inputs .seg span{padding:7px 4px;font-size:.84rem}
+  .inputs .row{gap:10px}
+  .inputs .hint{font-size:.74rem;margin-top:3px;line-height:1.3}
+  #rtHint{display:none}
+  .inputs .drawer{padding:10px 12px;margin-bottom:0}
+  .inputs .drawerBody{margin-top:10px;padding-top:10px}
+  .inputs .drawerBody .field:last-child{margin-bottom:0}
+  .stack{height:100%;overflow-y:auto;padding-right:6px;overscroll-behavior:contain}
+}
+@media (min-width:900px) and (max-height:720px){
+  .inputs .field{margin-bottom:7px}
+  .inputs input[type=text],.inputs input[type=number]{padding:5px 9px}
+  .inputs .seg span{padding:5px 4px}
+  .inputs .hint{display:none}
+  .head{margin-bottom:8px}
+}
+#res{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:22px 36px}
+#res .grp+.grp{margin-top:0}
+.hero .meta{gap:6px 28px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px}
+.panel h2{font-size:1rem;margin:0 0 14px;font-weight:600}
+.field{margin-bottom:16px}
+.field>label,.field>.lbl{display:block;font-size:.88rem;font-weight:600;margin-bottom:6px}
+.hint{font-size:.8rem;color:var(--muted);margin-top:4px}
+input[type=text],input[type=number]{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+input:focus-visible,button:focus-visible,summary:focus-visible,.seg input:focus-visible+span{outline:3px solid var(--accent);outline-offset:2px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--bg)}
+.seg label{flex:1;position:relative;cursor:pointer;margin:0}
+.seg input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.seg span{display:block;text-align:center;padding:9px 6px;font-size:.88rem;font-weight:500;color:var(--muted)}
+.seg input:checked+span{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.seg input:disabled+span{opacity:.4;cursor:not-allowed}
+.seg label+label{border-left:1px solid var(--line)}
+.seg.big span{padding:12px 8px;font-size:.95rem}
+details{border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-top:4px}
+summary{cursor:pointer;font-weight:600;font-size:.88rem}
+details .row{margin-top:12px}
+details .field{margin-bottom:0}
+.hero{background:var(--accent);color:var(--accent-ink);border-radius:14px;padding:22px}
+.hero p{margin:0;font-size:.92rem;opacity:.92}
+.hero .big{font-size:clamp(1.9rem,5vw,2.8rem);font-weight:700;letter-spacing:-.02em;line-height:1.1;margin:4px 0 10px;overflow-wrap:anywhere}
+.hero .meta{display:flex;flex-wrap:wrap;gap:6px 22px;font-size:.88rem}
+.hero .meta b{font-weight:600}
+.grp+.grp{margin-top:22px}
+.grp h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 4px;font-weight:600}
+dl.res{margin:0}
+dl.res>div{display:flex;justify-content:space-between;gap:16px;padding:9px 0;border-bottom:1px solid var(--line)}
+dl.res>div:last-child{border-bottom:0}
+dl.res dt{color:var(--muted)}
+dl.res dd{margin:0;font-weight:600;text-align:right}
+dl.res .neg{color:var(--warn)}
+dl.res .pos{color:var(--gain)}
+dl.res .key dt{color:var(--ink);font-weight:600}
+.tablebox{overflow-x:auto;max-height:360px;overflow-y:auto;border:1px solid var(--line);border-radius:9px}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{padding:8px 12px;text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{position:sticky;top:0;background:var(--soft);font-weight:600}
+tbody tr+tr td{border-top:1px solid var(--line)}
+.note{background:var(--warn-bg);color:var(--warn);border-radius:9px;padding:10px 12px;font-size:.88rem}
+.note[hidden],[hidden]{display:none!important}
+.stack>*+*{margin-top:20px}
+.foot{color:var(--muted);font-size:.8rem;margin-top:18px;max-width:90ch}
+button.ghost{font:inherit;font-size:.85rem;background:none;border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:8px 12px;cursor:pointer}
+button.ghost:hover{background:var(--soft)}
+.drawer{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:16px}
+.drawerBody{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.switch{display:flex;align-items:center;gap:12px;cursor:pointer;font-weight:600;font-size:.92rem;position:relative;margin:0}
+.switch input{position:absolute;opacity:0;width:44px;height:24px;margin:0;cursor:pointer}
+.switch .track{flex:none;width:44px;height:24px;border-radius:99px;background:var(--line);position:relative;transition:background .15s}
+.switch .track::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .15s}
+.switch input:checked+.track{background:var(--accent)}
+.switch input:checked+.track::after{transform:translateX(20px)}
+.switch input:focus-visible+.track{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1320px}
+.grid{grid-template-columns:minmax(330px,420px) minmax(0,1fr)}
+@media (max-width:700px){.grid{grid-template-columns:1fr}}
+@media (min-width:701px) and (min-height:520px){
+  .wrap{height:100vh;height:100dvh;display:flex;flex-direction:column;padding-top:18px;padding-bottom:16px}
+  h1{font-size:1.6rem}
+  .sub{margin-bottom:12px}
+  .seg.big{margin-bottom:14px!important}
+  .grid{flex:1;min-height:0;align-items:stretch}
+  .grid>.panel,.grid>.stack{height:100%;min-height:0;overflow-y:auto}
+  .grid>.stack{padding-right:4px}
+  .hero{position:sticky;top:0;z-index:2;padding:16px 20px;box-shadow:0 8px 16px -10px rgba(0,0,0,.4)}
+  .hero .big{font-size:clamp(1.6rem,3vw,2.3rem);margin:2px 0 6px}
+}
+
+input[type=date],select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+input[type=date]:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.seg.five span{font-size:.78rem;padding:9px 1px}
+.seg.tabs{margin-bottom:12px}
+.sublbl{font-size:.8rem;font-weight:600;color:var(--muted);margin:12px 0 6px}
+.drawerBody .field{margin-bottom:0}
+.drawerBody .row+.row,.drawerBody .field+.row,.drawerBody .row+.hint{margin-top:10px}
+@media (min-width:900px){.inputs input[type=date],.inputs select{padding:6px 8px;font-size:.88rem}}
+@media (min-width:900px) and (max-height:720px){.inputs input[type=date],.inputs select{padding:5px 8px}}
+
+input[type=date],select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+input[type=date]:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.seg.five span{font-size:.78rem;padding:9px 1px}
+.seg.tabs{margin-bottom:12px}
+.sublbl{font-size:.8rem;font-weight:600;color:var(--muted);margin:12px 0 6px}
+.drawerBody .field{margin-bottom:0}
+.drawerBody .row+.row,.drawerBody .field+.row,.drawerBody .row+.hint{margin-top:10px}
+@media (min-width:900px){.inputs input[type=date],.inputs select{padding:6px 8px;font-size:.88rem}}
+@media (min-width:900px) and (max-height:720px){.inputs input[type=date],.inputs select{padding:5px 8px}}
+.grid>*{min-width:0}
+@media (max-width:700px){.grid{grid-template-columns:minmax(0,1fr)}}
+.seg.tabs span{padding:8px 4px}
+
+input[type=date],select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+input[type=date]:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.seg.five span{font-size:.78rem;padding:9px 1px}
+.seg.tabs{margin-bottom:12px}
+.sublbl{font-size:.8rem;font-weight:600;color:var(--muted);margin:12px 0 6px}
+.drawerBody .field{margin-bottom:0}
+.drawerBody .row+.row,.drawerBody .field+.row,.drawerBody .row+.hint{margin-top:10px}
+@media (min-width:900px){.inputs input[type=date],.inputs select{padding:6px 8px;font-size:.88rem}}
+@media (min-width:900px) and (max-height:720px){.inputs input[type=date],.inputs select{padding:5px 8px}}
+.grid>*{min-width:0}
+@media (max-width:700px){.grid{grid-template-columns:minmax(0,1fr)}}
+.seg.tabs span{padding:8px 4px}
+@media (min-width:900px) and (max-height:820px){.inputs .drawerBody .hint{display:none}}
+
+input[type=date],select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+input[type=date]:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.seg.five span{font-size:.78rem;padding:9px 1px}
+.seg.tabs{margin-bottom:12px}
+.sublbl{font-size:.8rem;font-weight:600;color:var(--muted);margin:12px 0 6px}
+.drawerBody .field{margin-bottom:0}
+.drawerBody .row+.row,.drawerBody .field+.row,.drawerBody .row+.hint{margin-top:10px}
+@media (min-width:900px){.inputs input[type=date],.inputs select{padding:6px 8px;font-size:.88rem}}
+@media (min-width:900px) and (max-height:720px){.inputs input[type=date],.inputs select{padding:5px 8px}}
+.grid>*{min-width:0}
+@media (max-width:700px){.grid{grid-template-columns:minmax(0,1fr)}}
+.seg.tabs span{padding:8px 4px}
+@media (min-width:900px) and (max-height:820px){.inputs .drawerBody .hint{display:none}}
+.prod span{white-space:nowrap}
+@media (min-width:900px){.prod{width:440px}.head{min-height:0}}
+
+input[type=date],select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+input[type=date]:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.seg.five span{font-size:.78rem;padding:9px 1px}
+.seg.tabs{margin-bottom:12px}
+.sublbl{font-size:.8rem;font-weight:600;color:var(--muted);margin:12px 0 6px}
+.drawerBody .field{margin-bottom:0}
+.drawerBody .row+.row,.drawerBody .field+.row,.drawerBody .row+.hint{margin-top:10px}
+@media (min-width:900px){.inputs input[type=date],.inputs select{padding:6px 8px;font-size:.88rem}}
+@media (min-width:900px) and (max-height:720px){.inputs input[type=date],.inputs select{padding:5px 8px}}
+.grid>*{min-width:0}
+@media (max-width:700px){.grid{grid-template-columns:minmax(0,1fr)}}
+.seg.tabs span{padding:8px 4px}
+@media (min-width:900px) and (max-height:820px){.inputs .drawerBody .hint{display:none}}
+.prod span{white-space:nowrap}
+@media (min-width:900px){.prod{width:440px}.head{min-height:0}}
+
+input[type=date],select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+input[type=date]:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.seg.five span{font-size:.78rem;padding:9px 1px}
+.seg.tabs{margin-bottom:12px}
+.sublbl{font-size:.8rem;font-weight:600;color:var(--muted);margin:12px 0 6px}
+.drawerBody .field{margin-bottom:0}
+.drawerBody .row+.row,.drawerBody .field+.row,.drawerBody .row+.hint{margin-top:10px}
+@media (min-width:900px){.inputs input[type=date],.inputs select{padding:6px 8px;font-size:.88rem}}
+@media (min-width:900px) and (max-height:720px){.inputs input[type=date],.inputs select{padding:5px 8px}}
+.grid>*{min-width:0}
+@media (max-width:700px){.grid{grid-template-columns:minmax(0,1fr)}}
+.seg.tabs span{padding:8px 4px}
+@media (min-width:900px) and (max-height:820px){.inputs .drawerBody .hint{display:none}}
+.prod span{white-space:nowrap}
+@media (min-width:900px) and (max-height:700px){.inputs .drawerBody{margin-top:8px;padding-top:8px}.inputs .drawer{padding:8px 12px}.seg.tabs{margin-bottom:8px}.inputs .field{margin-bottom:6px}.inputs .drawerBody .row+.row{margin-top:6px}}
+@media (min-width:900px){.prod{width:440px}.head{min-height:0}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head"><div>
+  <h1>Investment Calculator</h1>
+  <p class="sub">Premium Yield Investment (₦) and Enhanced Dollar Investment ($), calculated per the Investment Module rules. Results update as you type.</p></div>
+
+  <div class="seg big prod" role="radiogroup" aria-label="Product">
+    <label><input type="radio" name="product" value="PYI" checked><span>Premium Yield (₦)</span></label>
+    <label><input type="radio" name="product" value="EDI"><span>Enhanced Dollar (EDI, $)</span></label>
+  </div>
+  </div>
+
+  <div class="grid">
+    <section class="panel inputs" aria-labelledby="inh">
+      <h2 id="inh">Investment details</h2>
+
+      <!-- Premium Yield -->
+      <div id="pyiForm">
+        <div class="row">
+          <div class="field">
+            <div class="lbl" id="l-rt">Rate type</div>
+            <div class="seg" role="radiogroup" aria-labelledby="l-rt">
+              <label><input type="radio" name="rateType" value="Regular" checked><span>Regular</span></label>
+              <label><input type="radio" name="rateType" value="Flat"><span>Flat</span></label>
+            </div>
+          </div>
+          <div class="field">
+            <div class="lbl" id="l-tt">Tenor type</div>
+            <div class="seg" role="radiogroup" aria-labelledby="l-tt">
+              <label><input type="radio" name="tenorType" value="Months" checked><span>Months</span></label>
+              <label><input type="radio" name="tenorType" value="Days"><span>Days</span></label>
+            </div>
+          </div>
+        </div>
+        <div class="hint" id="rtHint" style="margin:-6px 0 12px"></div>
+
+        <div class="field">
+          <div class="lbl" id="l-pt">Interest payment type</div>
+          <div class="seg five" role="radiogroup" aria-labelledby="l-pt">
+            <label><input type="radio" name="payType" value="Maturity" checked><span>Maturity</span></label>
+            <label><input type="radio" name="payType" value="Monthly"><span>Monthly</span></label>
+            <label><input type="radio" name="payType" value="Quarterly"><span>Quarterly</span></label>
+            <label><input type="radio" name="payType" value="Biannual"><span>Biannual</span></label>
+            <label><input type="radio" name="payType" value="Upfront"><span>Upfront</span></label>
+          </div>
+          <div class="hint" id="ptHint"></div>
+        </div>
+
+        <div class="field">
+          <label for="principal">Principal (₦)</label>
+          <input type="text" id="principal" inputmode="decimal" value="100,000.00">
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="tenor" id="tenorLbl">Tenor (months)</label>
+            <input type="number" id="tenor" min="1" step="1" value="3">
+          </div>
+          <div class="field">
+            <label for="rate">Rate (annual %)</label>
+            <input type="number" id="rate" min="0" step="0.01" value="16">
+          </div>
+        </div>
+
+        <div class="drawer">
+          <label class="switch"><input type="checkbox" id="tuOnP" role="switch"><span class="track" aria-hidden="true"></span><span>Include top-up and rollover</span></label>
+          <div class="drawerBody" id="tuBodyP" hidden>
+            <div class="seg tabs" role="radiogroup" aria-label="Top-up, replacement investment or rollover">
+              <label><input type="radio" name="tuTab" value="topup" checked><span>Top-up</span></label>
+              <label><input type="radio" name="tuTab" value="replacement"><span>Replacement</span></label>
+              <label><input type="radio" name="tuTab" value="rollover"><span>Rollover</span></label>
+            </div>
+
+            <div id="tabTopup">
+              <div class="row">
+                <div class="field"><label for="tuDays" id="tuDaysLbl">Days elapsed at top-up</label><input type="number" id="tuDays" min="0" step="1" value="45"></div>
+                <div class="field"><label for="tuAmt">Top-up amount (₦)</label><input type="text" id="tuAmt" inputmode="decimal" value="100,000"></div>
+              </div>
+              <div class="row">
+                <div class="field"><label for="rpTopDate">Top-up date (optional)</label><input type="date" id="rpTopDate"></div>
+                <div class="field"><label for="rpMatDate">Original maturity (optional)</label><input type="date" id="rpMatDate"></div>
+              </div>
+              <div class="hint">Applies to active, non-upfront investments. Month tenors count elapsed days as 30 per month. Add both dates to work out the new maturity date.</div>
+            </div>
+
+            <div id="tabReplacement" hidden>
+              <div class="row">
+                <div class="field"><label for="rpRate">New rate (annual %)</label><input type="number" id="rpRate" min="0" step="0.01" value="16"></div>
+                <div class="field"><label for="rpTenor">New tenure (months)</label><input type="number" id="rpTenor" min="1" step="1" value="3"></div>
+              </div>
+              <div class="row">
+                <div class="field"><label for="rpPay">New payment type</label>
+                  <select id="rpPay"><option>Maturity</option><option>Monthly</option><option>Quarterly</option><option>Biannual</option></select></div>
+                <div class="field"><label for="rpRT">New rate type</label>
+                  <select id="rpRT"><option>Regular</option><option>Flat</option></select></div>
+              </div>
+              <div class="hint">What the investment becomes after the top-up. Add the two dates on the Top-up tab to see its new maturity date.</div>
+            </div>
+
+            <div id="tabRollover" hidden>
+              <div class="row">
+                <div class="field"><label for="daysAfter">Days after maturity</label><input type="number" id="daysAfter" min="0" step="1" value="0"></div>
+                <div class="field"><label for="roExtra">Extra money added (₦)</label><input type="text" id="roExtra" inputmode="decimal" value="100,000"></div>
+              </div>
+              <div class="row">
+                <div class="field" style="grid-column:1/-1"><label for="roCash">Cash-out on part rollover (₦)</label><input type="text" id="roCash" inputmode="decimal" value="50,000"></div>
+              </div>
+              <div class="hint">Rollover applies to matured investments. Days after maturity earn the same daily rate, less WHT.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EDI -->
+      <div id="ediForm" hidden>
+        <div class="field">
+          <div class="lbl" id="l-ert">Rate type</div>
+          <div class="seg" role="radiogroup" aria-labelledby="l-ert">
+            <label><input type="radio" name="ediRate" value="Regular" checked><span>Regular (365)</span></label>
+            <label><input type="radio" name="ediRate" value="Flat"><span>Flat (360)</span></label>
+          </div>
+          <div class="hint">Day tenor only. Interest is paid at maturity, with no 30-day months and no yearly bonus.</div>
+        </div>
+        <div class="field">
+          <label for="ePrincipal">Principal ($)</label>
+          <input type="text" id="ePrincipal" inputmode="decimal" value="5,000.00">
+        </div>
+        <div class="row">
+          <div class="field"><label for="eTenor">Tenor (days)</label><input type="number" id="eTenor" min="1" step="1" value="180"></div>
+          <div class="field"><label for="eRate">Rate (annual %)</label><input type="number" id="eRate" min="0" step="0.01" value="8"></div>
+        </div>
+        <div class="drawer">
+          <label class="switch"><input type="checkbox" id="tuOnE" role="switch"><span class="track" aria-hidden="true"></span><span>Include early liquidation, top-up and rollover</span></label>
+          <div class="drawerBody" id="tuBodyE" hidden>
+            <div class="field">
+              <label for="eElapsed">Days elapsed (liquidation / top-up)</label>
+              <input type="number" id="eElapsed" min="0" step="1" value="60">
+            </div>
+            <div class="row">
+              <div class="field"><label for="eTop">Top-up amount ($)</label><input type="text" id="eTop" inputmode="decimal" value="1,000"></div>
+              <div class="field"><label for="eExtra">Extra money at rollover ($)</label><input type="text" id="eExtra" inputmode="decimal" value="1,000"></div>
+            </div>
+            <div class="row">
+              <div class="field"><label for="eCash">Cash-out on part rollover ($)</label><input type="text" id="eCash" inputmode="decimal" value="1,000"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="stack">
+      <div class="note" id="note" hidden></div>
+
+      <section class="hero" aria-live="polite">
+        <p id="heroLabel">Investment payable at maturity</p>
+        <div class="big" id="heroVal">0.00</div>
+        <div class="meta" id="heroMeta"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="rh">
+        <h2 id="rh">Breakdown</h2>
+        <div id="res"></div>
+      </section>
+
+      <section class="panel" id="schedPanel" aria-labelledby="sh">
+        <h2 id="sh">Payment schedule</h2>
+        <div class="tablebox">
+          <table>
+            <thead><tr><th>Payout</th><th>Covers up to</th><th>Days</th><th>Base interest</th><th>Bonus interest</th><th>Gross interest</th><th>WHT</th><th>Net interest</th><th>Principal returned</th><th>Total paid</th></tr></thead>
+            <tbody id="sched"></tbody>
+          </table>
+        </div>
+        <div class="hint" id="schedNote"></div>
+      </section>
+
+      <div><button class="ghost" id="copy" type="button">Copy summary</button> <span class="hint" id="copyMsg" role="status"></span></div>
+
+      <section class="panel" id="pyiSettings">
+        <details>
+          <summary>Product settings</summary>
+          <div class="row">
+            <div class="field"><label for="sWht">WHT rate %</label><input type="number" id="sWht" min="0" max="100" step="0.01" value="10"></div>
+            <div class="field"><label for="sPen">Upfront penalty %</label><input type="number" id="sPen" min="0" max="100" step="0.01" value="10"></div>
+            <div class="field"><label for="sDenR">Regular day-count denominator</label><input type="number" id="sDenR" min="1" value="365"></div>
+            <div class="field"><label for="sDenF">Flat day-count denominator</label><input type="number" id="sDenF" min="1" value="360"></div>
+            <div class="field"><label for="sDpm">Days per complete month</label><input type="number" id="sDpm" min="1" value="30"></div>
+            <div class="field"><label for="sBonus">Bonus days per completed year</label><input type="number" id="sBonus" min="0" value="5"></div>
+          </div>
+          <div class="hint">The upfront penalty is a placeholder until it is confirmed in the product configuration.</div>
+        </details>
+      </section>
+      <section class="panel" id="ediSettings" hidden>
+        <details>
+          <summary>Product settings</summary>
+          <div class="row">
+            <div class="field"><label for="eWht">Product WHT rate %</label><input type="number" id="eWht" min="0" max="100" step="0.01" value="10"></div>
+            <div class="field"><label for="ePen">Early-liquidation penalty %</label><input type="number" id="ePen" min="0" max="100" step="0.01" value="0"></div>
+          </div>
+          <div class="hint">Both rates are placeholders until they are confirmed in the product configuration.</div>
+        </details>
+      </section>
+
+      <p class="foot" id="foot">
+        <b>How this is calculated.</b> Daily interest = principal × rate ÷ denominator (365 regular, 360 flat). Month tenors count 30 days per month; day tenors use actual days. Regular month tenors also earn 5 bonus days per completed 12 months, paid in the payout that completes each year. Gross, WHT and net are worked out at full precision and rounded once: WHT = gross × WHT rate, net = gross × (1 − WHT rate), and upfront net also takes off the upfront penalty. Monthly, quarterly and biannual payouts cover 30, 90 and 180 days. Each payout's WHT and net are rounded on their own and the final payout carries the remaining base interest, so the schedule can differ from the summary net by a kobo or two, as in the live system. Expected funds at maturity = principal + the final payout's net interest. Top-up (active, non-upfront): value carried = principal + unpaid accrued gross − WHT on it, then new principal = value carried + top-up; interest already paid out is excluded. Rollover (matured): principal + unpaid net interest + post-maturity net interest, then add extra money or take off the cash-out. Rates are typed in rather than picked from the rate ladder. Figures are estimates for illustration.
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+/*LOGIC-START*/
+var L = (function(){
+  /* Excel-style ROUND(x,2): half away from zero, decimal-aware so 1.005 -> 1.01 */
+  function round2(x){
+    if(typeof x!=='number' || !isFinite(x)) return x;
+    var s = x<0 ? -1 : 1, a = Math.abs(x);
+    if(a<1e-6) return 0;
+    if(a>=1e15) return x;
+    var p = Number(a.toPrecision(15));
+    return s*Math.round(Number(p+'e2'))/100;
+  }
+
+  /* ---------- date helpers (UTC, no time zones) ---------- */
+  function parseISO(s){
+    var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s||'');
+    return m ? {y:+m[1], m:+m[2]-1, d:+m[3]} : null;
+  }
+  function edate(dt, months){
+    var t = dt.m+months, y = dt.y+Math.floor(t/12), mo = ((t%12)+12)%12;
+    var dim = new Date(Date.UTC(y, mo+1, 0)).getUTCDate();
+    return {y:y, m:mo, d:Math.min(dt.d, dim)};
+  }
+  function cmpDate(a,b){ return (a.y-b.y) || (a.m-b.m) || (a.d-b.d); }
+
+  /* ---------- Premium Yield: mirrors 'Premium Yield Investment' + 'Repayment Schedule' sheets ----------
+     i: {P,T,rate,rt:'Regular'|'Flat',tt:'Months'|'Days',pay:'Maturity'|'Monthly'|'Quarterly'|'Biannual'|'Upfront',
+         S:{w,pen,denR,denF,dpm,bonus}, elapsed,topUp,after,extra,cash}                                          */
+  function pyi(i){
+    var r2=round2, S=i.S, w=S.w;
+    var P=i.P, T=i.T, rate=i.rate, months=i.tt==='Months', flat=i.rt==='Flat', pay=i.pay;
+    var den = flat ? S.denF : S.denR;
+    var daily = P*rate/den;
+    var size = pay==='Monthly'?1 : pay==='Quarterly'?3 : pay==='Biannual'?6 : 0;
+    var periodic = size>0, upfront = pay==='Upfront', dpp = size*S.dpm;
+
+    var check='OK';
+    if(!(T>0) || T%1!==0) check='Tenor must be a positive whole number';
+    else if(months && size>1 && T%size!==0) check='Tenor must be a multiple of '+size+' months';
+
+    var baseDays = months ? T*S.dpm : T;
+    var bonusOn = months && !flat;                       /* bonus: regular month tenors only */
+    var bonusDays = bonusOn ? Math.floor(T/12)*S.bonus : 0;
+    var base = daily*baseDays, bonusRaw = daily*bonusDays, grossRaw = base+bonusRaw;   /* full precision */
+    var gross = r2(grossRaw), wht = r2(grossRaw*w);
+    var penalty = upfront ? r2(grossRaw*S.pen) : 0;
+    var net = upfront ? r2(grossRaw*(1-w) - grossRaw*S.pen) : r2(grossRaw*(1-w));      /* rounded once */
+
+    var c = {ok:check==='OK', check:check, P:P, T:T, rate:rate, pay:pay, months:months, flat:flat, periodic:periodic,
+      upfront:upfront, bonusOn:bonusOn, size:size, dpp:dpp, den:den, daily:daily, baseDays:baseDays, base:base,
+      bonusDays:bonusDays, bonusRaw:bonusRaw, grossRaw:grossRaw, gross:gross, wht:wht, penalty:penalty, net:net,
+      expected:P+net};
+    if(!c.ok) return c;
+
+    /* ----- payout schedule ----- */
+    var n = !periodic ? 1 : (months ? T/size : Math.ceil(T/dpp));
+    var regG, regN, bonusEach='n/a', yearEndG='n/a', yearEndN='n/a', yeb=0, finalRem, finalBonus, finalG, finalW, finalN, totalNet;
+    if(!periodic){
+      regG = gross; regN = net;
+      finalRem = base; finalBonus = bonusRaw;
+      finalG = r2(finalRem+finalBonus);
+      finalW = upfront ? wht : r2((finalRem+finalBonus)*w);
+      finalN = net;
+      totalNet = finalN;
+    } else {
+      regG = r2(daily*dpp);
+      regN = r2(regG*(1-w));
+      if(bonusOn){
+        bonusEach = daily*S.bonus;
+        yearEndG = regG+bonusEach;
+        yearEndN = r2(yearEndG*(1-w));
+        yeb = Math.floor(T/12) - (T%12===0 ? 1 : 0);
+      }
+      finalRem = base-(n-1)*regG;
+      finalBonus = (bonusOn && T%12===0) ? bonusEach : 0;
+      finalG = r2(finalRem+finalBonus);
+      finalW = r2((finalRem+finalBonus)*w);
+      finalN = r2((finalRem+finalBonus)*(1-w));
+      totalNet = bonusOn ? (n-1-yeb)*regN + yeb*yearEndN + finalN : (n-1)*regN + finalN;
+    }
+    var recon = r2(net-totalNet);
+    var balance = upfront ? P : P+finalG;
+    var funds   = upfront ? P : P+finalN;
+
+    /* one row per payout (Repayment Schedule sheet) */
+    var sched = [];
+    if(n<=1000){
+      if(periodic){
+        for(var k=1;k<=n;k++){
+          var D = k<n ? regG : base-(n-1)*regG;
+          var E = (bonusOn && (k*size)%12===0) ? daily*S.bonus : 0;
+          sched.push({n:k, when: months ? 'Month '+(k*size) : 'Day '+Math.min(k*dpp,T),
+            days: k<n ? dpp : baseDays-(n-1)*dpp, base:D, bonus:E, gross:r2(D+E), wht:r2((D+E)*w), net:r2((D+E)*(1-w)),
+            principal: k===n ? P : 0});
+        }
+      } else if(upfront){
+        sched.push({n:1, when:'Start date', days:baseDays, base:base, bonus:bonusRaw, gross:gross, wht:wht, penalty:penalty, net:net, principal:0});
+        sched.push({n:2, when:'At maturity', days:null, base:0, bonus:0, gross:0, wht:0, net:0, principal:P});
+      } else {
+        sched.push({n:1, when: months ? 'Month '+T : 'Day '+T, days:baseDays, base:base, bonus:bonusRaw, gross:gross, wht:wht, net:net, principal:P});
+      }
+    }
+
+    /* ----- top-up (active, non-upfront) ----- */
+    var el = Math.min(i.elapsed, baseDays);
+    var tuMsg = upfront ? 'No: upfront investments cannot be topped up' : (el>=baseDays ? 'No: investment has matured' : 'Yes');
+    var accrued = bonusOn ? daily*(el + Math.floor(el/(12*S.dpm))*S.bonus) : daily*el;
+    var made = periodic ? Math.min(Math.floor(el/dpp), n-1) : (upfront ? 1 : 0);
+    var paid = upfront ? grossRaw
+             : (periodic ? made*regG + (bonusOn ? Math.floor(made*size/12)*bonusEach : 0) : 0);
+    var unpaid = Math.max(accrued-paid, 0), unpaidW = unpaid*w, unpaidN = r2(unpaid-unpaidW);
+    var carried = P+unpaidN;
+    var newP = tuMsg==='Yes' ? carried+i.topUp : 'Not allowed';
+
+    /* ----- rollover (matured) ----- */
+    var unpaidNet = upfront ? 0 : finalN;
+    var postN = r2(daily*i.after*(1-w));
+    var full = P+unpaidNet+postN;
+    var withExtra = full+i.extra;
+    var part = i.cash>full ? 'Cash-out exceeds value' : full-i.cash;
+    var cashOut = Math.min(i.cash, full);
+
+    c.n=n; c.regG=regG; c.regN=regN; c.bonusEach=bonusEach; c.yearEndG=yearEndG; c.yearEndN=yearEndN; c.yeb=yeb;
+    c.finalRem=finalRem; c.finalBonus=finalBonus; c.finalG=finalG; c.finalW=finalW; c.finalN=finalN;
+    c.totalNet=totalNet; c.recon=recon; c.balance=balance; c.funds=funds; c.sched=sched;
+    c.tu={allowed:tuMsg==='Yes', msg:tuMsg, el:el, accrued:accrued, made:made, paid:paid, unpaid:unpaid, wht:unpaidW, net:unpaidN,
+          carried:carried, amt:i.topUp, newP:newP};
+    c.ro={unpaidNet:unpaidNet, after:i.after, postN:postN, full:full, withExtra:withExtra, part:part, cashOut:cashOut};
+
+    /* flat list in the sheet's own order and wording (used to test against the workbook) */
+    c.rows = [
+      ['Principal',P],['Tenor',T],['Tenor check',check],['Rate',rate],['Annual denominator',den],['Daily interest',daily],
+      ['Base interest days',baseDays],['Base interest',base],['Bonus days',bonusDays],['Bonus interest',bonusRaw],
+      ['Total gross interest',gross],['Withholding Tax (WHT)',wht],['Upfront penalty',penalty],['Net interest (summary)',net],
+      ['Expected value (principal + net)',P+net],
+      ['Number of interest payouts',n],['Gross per regular payout',regG],['Net per regular payout',regN],
+      ['Bonus added to each year-end payout',bonusEach],['Gross on a year-end payout (regular + bonus)',yearEndG],
+      ['Net on a year-end payout',yearEndN],['Year-end payouts before the final one',yeb],
+      ['Final payout: remaining base interest',finalRem],['Final payout: bonus included',finalBonus],
+      ['Gross on final payout',finalG],['WHT on final payout',finalW],['Net on final payout',finalN],
+      ['Total net across all payouts',totalNet],['Summary net minus schedule total',recon],
+      ['Investment balance at maturity',balance],['Expected funds at maturity',funds],
+      ['Days elapsed at top-up date',el],['Top-up allowed?',tuMsg],['Gross interest accrued to date',accrued],
+      ['Interest payouts already made',made],['Gross interest already paid out',paid],['Unpaid accrued gross interest',unpaid],
+      ['WHT on unpaid accrued interest',unpaidW],['Net unpaid accrued interest (rounded once)',unpaidN],
+      ['Value carried into top-up',carried],['Top-up amount',i.topUp],['New principal after top-up',newP],
+      ['Unpaid net interest at maturity',unpaidNet],['Days processed after maturity',i.after],['Post-maturity net interest',postN],
+      ['Full rollover: new principal',full],['Rollover with extra money: new principal',withExtra],
+      ['Part rollover: new principal',part],['Part rollover: paid out to customer',cashOut]
+    ];
+    return c;
+  }
+
+  /* ---------- Replacement investment after a top-up: mirrors the 'Top-up Check' sheet, section 4 ----------
+     o: {newP, rate, tenure (months), pay:'Maturity'|'Monthly'|'Quarterly'|'Biannual', rt, S, topDate, matDate} */
+  function replacement(o){
+    var r2=round2, S=o.S, w=S.w, T=o.tenure;
+    var size = o.pay==='Monthly'?1 : o.pay==='Quarterly'?3 : o.pay==='Biannual'?6 : T;
+    var r = {ok:true, msg:''};
+    var matDate = parseISO(o.matDate), topDate = parseISO(o.topDate);
+    if(!(T>0) || T%1!==0){ r.ok=false; r.msg='Enter the new tenure as a whole number of months.'; }
+    else if(o.pay!=='Maturity' && T%size!==0){ r.ok=false; r.msg='New tenure must be a multiple of '+size+' months for '+o.pay.toLowerCase()+' interest.'; }
+    r.newMaturity = null;
+    if(matDate && topDate && T>0 && T%1===0){
+      var cand = edate(topDate, T);
+      r.newMaturity = cmpDate(cand, matDate)>0 ? cand : matDate;
+    }
+    if(!r.ok) return r;
+    var den = o.rt==='Regular' ? S.denR : S.denF;
+    var daily = o.newP*o.rate/den;
+    var baseDays = T*S.dpm;
+    var bonusDays = o.rt==='Regular' ? Math.floor(T/12)*S.bonus : 0;
+    var raw = daily*(baseDays+bonusDays);
+    var n = o.pay==='Maturity' ? 1 : T/size;
+    var regG = o.pay==='Maturity' ? r2(raw) : r2(daily*size*S.dpm);
+    var finalFull = o.pay==='Maturity' ? raw
+                  : daily*baseDays-(n-1)*regG + ((bonusDays>0 && T%12===0) ? daily*S.bonus : 0);
+    var finalN = r2(finalFull*(1-w));
+    r.newP=o.newP; r.daily=daily; r.baseDays=baseDays; r.bonusDays=bonusDays;
+    r.gross=r2(raw); r.wht=r2(raw*w); r.net=r2(raw*(1-w));
+    r.n=n; r.regG=regG; r.finalFull=finalFull; r.finalN=finalN;
+    r.funds=o.newP+finalN; r.ref=o.newP+r.net; r.den=den;
+    return r;
+  }
+
+  /* ---------- EDI: mirrors the 'EDI Investment' sheet ----------
+     i: {P,T,rate,flat,w,pen,elapsed,top,extra,cash} */
+  function edi(i){
+    var r2=round2, P=i.P, T=i.T, w=i.w;
+    var den = i.flat ? 360 : 365, daily = P*i.rate/den;
+    var gross = r2(daily*T), wht = r2(gross*w), net = r2(gross-wht), value = P+net;
+    var d = Math.min(i.elapsed, T), matured = d>=T;
+    var aG = daily*d, aW = aG*w, aN = r2(aG-aW);                 /* full precision, net rounded once */
+    var pr = matured ? 0 : i.pen, liqPen = r2(aN*pr), avail = P+aN-liqPen;
+    var topMsg = matured ? 'No: only active EDI can be topped up' : 'Yes (investment active)';
+    var part = i.cash>value ? 'Cash-out exceeds value' : value-i.cash;
+    return {ok:P>0&&T>0, P:P, T:T, rate:i.rate, den:den, daily:daily, gross:gross, wht:wht, net:net, value:value,
+      balance:P+gross, payable:P+net, d:d, matured:matured, aG:aG, aW:aW, aN:aN, pr:pr, liqPen:liqPen, avail:avail,
+      topAllowed:!matured, topMsg:topMsg, top:i.top, newP:P+aN+i.top, withTop:value+i.extra, part:part,
+      cashOut:Math.min(i.cash,value), extra:i.extra, cash:i.cash};
+  }
+
+  return {round2:round2, pyi:pyi, replacement:replacement, edi:edi, parseISO:parseISO, edate:edate};
+})();
+/*LOGIC-END*/
+
+
+  var $ = function(id){return document.getElementById(id)};
+  var fmt2 = new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  var fmt4 = new Intl.NumberFormat('en-US',{minimumFractionDigits:4,maximumFractionDigits:4});
+  var cur = '₦';
+  var radio = function(name){return document.querySelector('input[name="'+name+'"]:checked').value};
+  var setRadio = function(name,val){document.querySelector('input[name="'+name+'"][value="'+val+'"]').checked=true};
+  var num = function(id){var v=parseFloat($(id).value);return isNaN(v)?0:v};
+  var amt = function(id){var v=parseFloat($(id).value.replace(/[^0-9.]/g,''));return isNaN(v)?0:v};
+  var esc = function(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+  var m = function(v){return typeof v==='number' ? cur+fmt2.format(L.round2(v)) : String(v)};
+  var minus = function(v){return typeof v==='number' ? '− '+m(v) : String(v)};
+  var dash = function(v){return (typeof v==='number' && L.round2(v)===0) ? '–' : m(v)};
+  var summary = '';
+  var touched = {};
+  var drawerOn = function(){return $('tuOnP').checked};
+
+  function group(title, items){
+    return '<div class="grp"><h3>'+esc(title)+'</h3><dl class="res">'+items.map(function(i){
+      return '<div class="'+(i[3]||'')+'"><dt>'+esc(i[0])+'</dt><dd class="'+(i[2]||'')+'">'+esc(i[1])+'</dd></div>';
+    }).join('')+'</dl></div>';
+  }
+  function plain(groups){
+    return groups.map(function(g){return g[0]+'\n'+g[1].map(function(i){return '  '+i[0]+': '+i[1]}).join('\n')}).join('\n');
+  }
+  function setNote(notes){var n=$('note'); if(notes.length){n.hidden=false;n.textContent=notes.join(' ')} else n.hidden=true}
+  function fmtDate(d){
+    return new Date(Date.UTC(d.y,d.m,d.d)).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'});
+  }
+
+  function settings(){
+    return {w:num('sWht')/100, pen:num('sPen')/100, denR:num('sDenR')||365, denF:num('sDenF')||360, dpm:num('sDpm')||30, bonus:num('sBonus')};
+  }
+
+  function syncPyi(){
+    var days = radio('tenorType')==='Days', flat = radio('rateType')==='Flat', pay = radio('payType');
+    $('tenorLbl').textContent = days ? 'Tenor (days)' : 'Tenor (months)';
+    $('tuDaysLbl').textContent = 'Days elapsed at top-up';
+    $('rtHint').textContent = days
+      ? (flat ? 'Flat: 360-day basis, actual days, no bonus.' : 'Regular: 365-day basis, actual days, no bonus.')
+      : (flat ? 'Flat: 360-day basis, 30 days per month, no bonus.' : 'Regular: 365-day basis, 30 days per month, 5 bonus days per completed year.');
+    var every = {Monthly:'30 days',Quarterly:'90 days',Biannual:'180 days'};
+    $('ptHint').textContent = ({
+      Maturity:'All interest is paid with the principal at the end.',
+      Monthly:'Interest is paid every '+every.Monthly+'; the final payout carries any leftover days'+(days?'':' and the yearly bonus')+'.',
+      Quarterly:'Interest is paid every '+every.Quarterly+(days?'':' (tenor must be a multiple of 3 months)')+'; the final payout carries any leftover days.',
+      Biannual:'Interest is paid every '+every.Biannual+(days?'':' (tenor must be a multiple of 6 months)')+'; the final payout carries any leftover days.',
+      Upfront:'Net interest, less the upfront penalty, is paid on the start date. The principal returns at maturity.'
+    })[pay];
+  }
+
+  /* keep the replacement-investment defaults in step with the original until the user edits them */
+  function mirrorReplacement(){
+    if(!touched.rpRate) $('rpRate').value = $('rate').value;
+    if(!touched.rpRT) $('rpRT').value = radio('rateType');
+    if(!touched.rpPay){ var p=radio('payType'); $('rpPay').value = (p==='Upfront') ? 'Maturity' : p; }
+  }
+
+  function renderPyi(){
+    cur='₦'; syncPyi(); mirrorReplacement();
+    var on = drawerOn();
+    var c = L.pyi({P:amt('principal'), T:num('tenor'), rate:num('rate')/100, rt:radio('rateType'), tt:radio('tenorType'), pay:radio('payType'),
+      S:settings(), elapsed:Math.max(0,num('tuDays')), topUp:amt('tuAmt'), after:Math.max(0,num('daysAfter')), extra:amt('roExtra'), cash:amt('roCash')});
+    var notes=[];
+    if(!(c.P>0)) notes.push('Enter a principal above zero.');
+    if(!c.ok) notes.push(c.check+'.');
+
+    var calc=[
+      ['Principal',m(c.P)],
+      ['Day-count denominator',String(c.den)],
+      ['Daily interest',fmt4.format(c.daily)],
+      ['Base interest days',String(c.baseDays)],
+      ['Base interest',m(c.base)],
+      ['Bonus days',String(c.bonusDays)],
+      ['Bonus interest',dash(c.bonusRaw)],
+      ['Total gross interest',m(c.gross),'pos','key'],
+      ['Withholding tax (WHT)',minus(c.wht),'neg']
+    ];
+    if(c.upfront) calc.push(['Upfront penalty',minus(c.penalty),'neg']);
+    calc.push(['Net interest',m(c.net),'pos','key']);
+    calc.push(['Expected value (principal + net)',m(c.P+c.net),'','key']);
+
+    if(!c.ok){
+      $('heroLabel').textContent='Investment payable at maturity';
+      $('heroVal').textContent='–';
+      $('heroMeta').innerHTML='<span>Fix the tenor to see the full result</span>';
+      $('res').innerHTML = group('Interest calculation',calc);
+      $('schedPanel').hidden=false;
+      $('sched').innerHTML='<tr><td colspan="10">Fix the tenor to see the schedule.</td></tr>';
+      $('schedNote').textContent='';
+      setNote(notes);
+      summary='Premium Yield Investment\n'+c.check;
+      return;
+    }
+
+    var up=c.upfront;
+    $('heroLabel').textContent = up ? 'Upfront interest payout' : 'Investment payable at maturity';
+    $('heroVal').textContent = m(up ? c.net : c.funds);
+    $('heroMeta').innerHTML = '<span>Net interest <b>'+m(c.net)+'</b></span><span>Expected value <b>'+m(c.P+c.net)+'</b></span><span>Payouts <b>'+(up?'1 (on start date)':c.n)+'</b></span>';
+
+    var pay=[['Number of interest payouts', up ? '1 (on start date)' : String(c.n)]];
+    if(c.periodic){
+      pay.push(['Gross per regular payout',m(c.regG)],['Net per regular payout',m(c.regN)]);
+      if(c.bonusOn && c.bonusDays>0){
+        pay.push(['Bonus added to each year-end payout',m(c.bonusEach)],['Gross on a year-end payout',m(c.yearEndG)],
+                 ['Net on a year-end payout',m(c.yearEndN)],['Year-end payouts before the final one',String(c.yeb)]);
+      }
+      pay.push(['Final payout: remaining base interest',m(c.finalRem)]);
+      if(c.bonusOn && c.bonusDays>0) pay.push(['Final payout: bonus included',dash(c.finalBonus)]);
+    }
+    pay.push(['Gross on final payout',m(c.finalG)],['WHT on final payout',minus(c.finalW)],['Net on final payout',m(c.finalN),'pos']);
+    if(c.periodic) pay.push(['Total net across all payouts',m(c.totalNet)],['Summary net minus schedule total',m(c.recon)]);
+    pay.push(['Investment balance at maturity',m(c.balance)],['Expected funds at maturity',m(c.funds),'','key']);
+
+    var groups=[['Interest calculation',calc],['Payout schedule',pay]];
+
+    if(on){
+      var t=c.tu, tuG;
+      if(t.allowed){
+        tuG=[['Top-up allowed?','Yes (investment active)'],['Days elapsed at top-up date',String(t.el)],
+          ['Gross interest accrued to date',m(t.accrued)],['Interest payouts already made',String(t.made)],
+          ['Gross interest already paid out',dash(t.paid)],['Unpaid accrued gross interest',dash(t.unpaid)],
+          ['WHT on unpaid accrued interest',t.wht ? minus(t.wht) : '–', t.wht?'neg':''],
+          ['Net unpaid accrued interest',dash(t.net)],['Value carried into top-up',m(t.carried)],
+          ['Top-up amount',t.amt ? m(t.amt) : '–'],['New principal after top-up',m(t.newP),'','key']];
+      } else tuG=[['Top-up allowed?',t.msg]];
+      groups.push(['Top-up (active, non-upfront)',tuG]);
+
+      if(t.allowed){
+        var R=L.replacement({newP:t.newP, rate:num('rpRate')/100, tenure:num('rpTenor'), pay:$('rpPay').value, rt:$('rpRT').value,
+          S:settings(), topDate:$('rpTopDate').value, matDate:$('rpMatDate').value});
+        if(!R.ok){
+          groups.push(['Replacement investment',[['New principal',m(t.newP)],['Check',R.msg]]]);
+          notes.push(R.msg);
+        } else {
+          var rg=[['New principal',m(R.newP),'','key']];
+          if(R.newMaturity) rg.push(['New maturity date',fmtDate(R.newMaturity),'','key']);
+          rg.push(['Day-count denominator',String(R.den)],['Daily interest',fmt4.format(R.daily)],['Base interest days',String(R.baseDays)],
+            ['Bonus days',String(R.bonusDays)],['Total gross interest',m(R.gross)],['Withholding tax (WHT)',minus(R.wht)],['Net interest',m(R.net),'pos'],
+            ['Number of interest payouts',String(R.n)],['Gross per regular payout',m(R.regG)],['Net on final payout',m(R.finalN)],
+            ['Expected funds at maturity',m(R.funds),'','key'],['For reference: principal + full-term net',m(R.ref)]);
+          groups.push(['Replacement investment',rg]);
+        }
+      }
+
+      var r=c.ro;
+      var roG=[['Unpaid net interest at maturity',dash(r.unpaidNet)],['Days processed after maturity',String(r.after)],
+        ['Post-maturity net interest',dash(r.postN)],['Full rollover: new principal',m(r.full),'','key'],
+        ['Rollover with extra money: new principal',m(r.withExtra),'','key'],
+        ['Part rollover: new principal',m(r.part),'','key'],['Part rollover: paid out to customer',dash(r.cashOut)]];
+      groups.push(['Rollover (matured)',roG]);
+      if(typeof r.part==='string') notes.push('Cash-out on part rollover is more than the rollover value.');
+    }
+
+    $('res').innerHTML = groups.map(function(g){return group(g[0],g[1])}).join('');
+
+    /* payment schedule: one row per payout */
+    $('schedPanel').hidden=false;
+    if(!c.sched.length){
+      $('sched').innerHTML='<tr><td colspan="10">'+c.n.toLocaleString('en-US')+' payouts. The table is not listed for more than 1,000.</td></tr>';
+    } else {
+      $('sched').innerHTML = c.sched.map(function(s){
+        var wht = s.penalty ? s.wht+s.penalty : s.wht;
+        return '<tr><td>'+s.n+'</td><td>'+esc(s.when)+'</td><td>'+(s.days===null?'–':s.days)+'</td><td>'+dash(s.base)+'</td><td>'+dash(s.bonus)+
+          '</td><td>'+dash(s.gross)+'</td><td>'+dash(wht)+'</td><td>'+dash(s.net)+'</td><td>'+(s.principal?m(s.principal):'–')+'</td><td>'+m(s.net+s.principal)+'</td></tr>';
+      }).join('');
+    }
+    $('schedNote').textContent = c.upfront ? 'The WHT column on the start date includes the upfront penalty of '+m(c.penalty)+'.'
+      : (c.periodic ? 'Each payout\'s WHT and net are rounded on their own, so the schedule total can differ from the summary net by a kobo or two.' : '');
+
+    setNote(notes);
+    summary = 'Premium Yield Investment\n'+radio('rateType')+' | '+c.T+' '+radio('tenorType').toLowerCase()+' | '+c.pay+' | rate '+(c.rate*100).toFixed(2)+'%\n'+plain(groups);
+  }
+
+  function renderEdi(){
+    cur='$';
+    var on = $('tuOnE').checked;
+    var c = L.edi({P:amt('ePrincipal'), T:num('eTenor'), rate:num('eRate')/100, flat:radio('ediRate')==='Flat', w:num('eWht')/100, pen:num('ePen')/100,
+      elapsed:Math.max(0,num('eElapsed')), top:amt('eTop'), extra:amt('eExtra'), cash:amt('eCash')});
+    var notes=[];
+    if(!(c.P>0)) notes.push('Enter a principal above zero.');
+    if(!(c.T>0)) notes.push('Enter a tenor above zero.');
+    else if(c.T%1!==0) notes.push('Tenor should be a whole number of days.');
+    $('heroLabel').textContent='Investment payable at maturity';
+    $('heroVal').textContent = c.ok ? m(c.payable) : m(0);
+    var meta='<span>Net interest <b>'+m(c.ok?c.net:0)+'</b></span>';
+    if(on) meta+='<span>Available if liquidated now <b>'+m(c.ok?c.avail:0)+'</b></span><span>Status <b>'+(c.matured?'Matured':'Active')+'</b></span>';
+    $('heroMeta').innerHTML=meta;
+
+    var mat=[['Day-count denominator',String(c.den)],['Daily interest',fmt4.format(c.daily)],['Gross interest',m(c.gross),'pos','key'],
+      ['Withholding tax (WHT)',minus(c.wht),'neg'],['Net interest',m(c.net),'pos','key'],['Expected maturity value',m(c.value),'','key'],
+      ['Investment balance at maturity',m(c.balance)],['Investment payable at maturity',m(c.payable)]];
+    var groups=[['At maturity',mat]];
+    if(on){
+      groups.push(['Early liquidation',[['Days elapsed',String(c.d)],['Status on that date',c.matured?'Matured':'Active'],
+        ['Gross interest accrued',m(c.aG)],['WHT on accrued interest',minus(c.aW),'neg'],['Net interest accrued',m(c.aN),'pos'],
+        ['Penalty rate applied',(c.pr*100).toFixed(2)+'%'],['Liquidation penalty',c.liqPen?minus(c.liqPen):'–',c.liqPen?'neg':''],
+        ['Available value on liquidation',m(c.avail),'','key']]]);
+      groups.push(['Top-up (active investments)', c.topAllowed ? [['Top-up allowed?',c.topMsg],['Existing principal',m(c.P)],
+        ['Net interest accrued to top-up date',m(c.aN),'pos'],['Top-up amount',c.top?m(c.top):'–'],
+        ['Replacement principal after top-up',m(c.newP),'','key']] : [['Top-up allowed?',c.topMsg]]]);
+      groups.push(['Rollover (matured)',[['Rollover value at maturity (principal + net)',m(c.value)],['Full rollover: new principal',m(c.value),'','key'],
+        ['Rollover with top-up: new principal',m(c.withTop),'','key'],['Part rollover: new principal',m(c.part),'','key'],
+        ['Part rollover: paid out to customer',c.cashOut?m(c.cashOut):'–']]]);
+      if(typeof c.part==='string') notes.push('Cash-out on part rollover is more than the rollover value.');
+    }
+    $('res').innerHTML = groups.map(function(g){return group(g[0],g[1])}).join('');
+    $('schedPanel').hidden=true;
+    setNote(notes);
+    summary='Enhanced Dollar Investment\n'+(radio('ediRate'))+' | '+c.T+' days | maturity | rate '+(c.rate*100).toFixed(2)+'%\nPrincipal: '+m(c.P)+'\n'+plain(groups);
+  }
+
+  function render(){
+    var p = radio('product');
+    $('pyiForm').hidden = p!=='PYI';
+    $('ediForm').hidden = p!=='EDI';
+    $('tuBodyP').hidden = !$('tuOnP').checked;
+    $('tuBodyE').hidden = !$('tuOnE').checked;
+    var tab = radio('tuTab');
+    $('tabTopup').hidden = tab!=='topup';
+    $('tabReplacement').hidden = tab!=='replacement';
+    $('tabRollover').hidden = tab!=='rollover';
+    $('pyiSettings').hidden = p!=='PYI';
+    $('ediSettings').hidden = p!=='EDI';
+    if(p==='PYI') renderPyi(); else renderEdi();
+  }
+
+  document.addEventListener('input', function(e){
+    var id = e.target && e.target.id;
+    if(id==='rpRate'||id==='rpRT'||id==='rpPay') touched[id]=true;
+  }, true);
+  document.addEventListener('change', function(e){
+    if(e.target && (e.target.id==='tuOnP'||e.target.id==='tuOnE')){ $('tuOnP').checked=e.target.checked; $('tuOnE').checked=e.target.checked; }
+    if(e.target && e.target.name==='tenorType'){
+      var d = e.target.value==='Days';
+      if(num('tenor')===(d?3:190)) $('tenor').value = d?190:3;
+      if(num('tuDays')===(d?45:60)) $('tuDays').value = d?60:45;
+    }
+  });
+  document.addEventListener('input', render);
+  document.addEventListener('change', render);
+  ['principal','ePrincipal','tuAmt','roExtra','roCash','eTop','eExtra','eCash'].forEach(function(id){
+    $(id).addEventListener('blur', function(){ var v=amt(id); if(v>0) $(id).value=fmt2.format(v); render(); });
+  });
+  $('copy').addEventListener('click', function(){
+    var done=function(msg){$('copyMsg').textContent=msg;setTimeout(function(){$('copyMsg').textContent=''},2200)};
+    try{ navigator.clipboard.writeText(summary).then(function(){done('Copied')},function(){done('Copy blocked by the browser')}); }
+    catch(e){ done('Copy blocked by the browser'); }
+  });
+  render();
+})();
+</script>
+</body>
+</html>
+
+</body></html>
