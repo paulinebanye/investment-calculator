@@ -138,6 +138,7 @@ investment-calculator/
 │   └── build-single.js     # Bundles everything into one HTML file
 │
 ├── package.json
+├── vercel.json             # Serves the folder as a static site
 ├── .gitignore
 └── README.md
 ```
@@ -186,10 +187,10 @@ npm test
 
 ---
 
-## Build a Single File
+## Bundle a Single File
 
 ```bash
-npm run build
+npm run bundle
 ```
 
 This writes `dist/investment-calculator.html` with the CSS and JavaScript inlined. Use it for emailing the calculator or publishing it as one page.
@@ -199,6 +200,8 @@ This writes `dist/investment-calculator.html` with the CSS and JavaScript inline
 ## Host the Calculator
 
 Upload the project folder (or `dist/investment-calculator.html`) to any static host, for example GitHub Pages, Netlify or an internal web server.
+
+On Vercel, import the repository and leave the framework preset on **Other**. `vercel.json` already tells Vercel there is no build step and that the project root is the site, so no build or output settings are needed.
 
 Everything runs in the browser and no data is sent anywhere.
 

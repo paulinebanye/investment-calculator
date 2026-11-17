@@ -1,5 +1,5 @@
 /* Bundles index.html + css + js into dist/investment-calculator.html (one file, for emailing or hosting).
-   Run with: npm run build */
+   Run with: npm run bundle */
 const fs = require('fs');
 const path = require('path');
 const root = path.join(__dirname, '..');
