@@ -241,6 +241,8 @@ Switch on **Include top-up and rollover** to open the drawer. It has three tabs:
 
 Top-up applies to active, non-upfront investments only. Rollover applies to matured investments.
 
+When a top-up is allowed and the replacement investment is valid, the headline figure and the payment schedule switch to the replacement investment (the new principal, rate, tenure and payment type). The original investment's figures stay in the breakdown, labelled "Original investment". The replacement tenure follows the original tenor until you edit it.
+
 When both dates are entered, the results show the new maturity date.
 
 ---

@@ -56,3 +56,15 @@ test('Top-up replacement investment (Top-up Check sample)', () => {
   assert.equal(r.ok, true);
   assert.ok(r.newMaturity);
 });
+
+test('Replacement summary matches a full schedule built on the new principal', () => {
+  const noMin = { ...S, minP: 0, minMonths: 0, minDays: 0 };
+  for (const [pay, T] of [['Maturity', 3], ['Monthly', 13], ['Quarterly', 12], ['Biannual', 24], ['Monthly', 24]]) {
+    const t = L.pyi({ ...base, P: 2000000, T: 24, rate: 0.23, pay: 'Biannual', elapsed: 45, topUp: 5000000 });
+    const r = L.replacement({ newP: t.tu.newP, rate: 0.23, tenure: T, pay, rt: 'Regular', S: noMin });
+    const p = L.pyi({ ...base, S: noMin, P: t.tu.newP, T, rate: 0.23, pay });
+    assert.equal(r.ok, true);
+    assert.equal(p.funds, r.funds, `${pay} ${T}m`);
+    assert.equal(p.net, r.net, `${pay} ${T}m net`);
+  }
+});

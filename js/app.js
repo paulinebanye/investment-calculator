@@ -59,6 +59,7 @@ var L = window.InvestmentLogic;
   function mirrorReplacement(){
     if(!touched.rpRate) $('rpRate').value = $('rate').value;
     if(!touched.rpRT) $('rpRT').value = radio('rateType');
+    if(!touched.rpTenor){ var t0=num('tenor'); $('rpTenor').value = radio('tenorType')==='Months' ? (t0>0?t0:'') : Math.max(1,Math.round(t0/30)); }
     if(!touched.rpPay){ var p=radio('payType'); $('rpPay').value = (p==='Upfront') ? 'Maturity' : p; }
   }
 
@@ -120,6 +121,7 @@ var L = window.InvestmentLogic;
     pay.push(['Investment balance at maturity',m(c.balance)],['Expected funds at maturity',m(c.funds),'','key']);
 
     var groups=[['Interest calculation',calc],['Payout schedule',pay]];
+    var rep=null, repMat=null;
 
     if(on){
       var t=c.tu, tuG;
@@ -147,6 +149,10 @@ var L = window.InvestmentLogic;
             ['Number of interest payouts',String(R.n)],['Gross per regular payout',m(R.regG)],['Net on final payout',m(R.finalN)],
             ['Expected funds at maturity',m(R.funds),'','key'],['For reference: principal + full-term net',m(R.ref)]);
           groups.push(['Replacement investment',rg]);
+          /* the replacement investment is what the customer holds after the top-up, so it drives the headline and schedule */
+          rep = L.pyi({P:R.newP, T:num('rpTenor'), rate:num('rpRate')/100, rt:$('rpRT').value, tt:'Months', pay:$('rpPay').value,
+            S:Object.assign({},settings(),{minP:0,minMonths:0,minDays:0}), elapsed:0, topUp:0, after:0, extra:0, cash:0});
+          if(!rep.ok) rep=null; else repMat=R.newMaturity;
         }
       }
 
@@ -159,21 +165,31 @@ var L = window.InvestmentLogic;
       if(typeof r.part==='string') notes.push('Cash-out on part rollover is more than the rollover value.');
     }
 
+    var sc = rep || c;
+    if(rep){
+      groups[0][0]='Original investment: interest calculation';
+      groups[1][0]='Original investment: payout schedule';
+      $('heroLabel').textContent='Investment payable at maturity, after top-up';
+      $('heroVal').textContent=m(rep.funds);
+      $('heroMeta').innerHTML='<span>New principal <b>'+m(rep.P)+'</b></span><span>Net interest <b>'+m(rep.net)+'</b></span><span>Payouts <b>'+rep.n+'</b></span>'
+        +(repMat?'<span>New maturity <b>'+fmtDate(repMat)+'</b></span>':'');
+    }
+    $('sh').textContent = rep ? 'Payment schedule: replacement investment after top-up' : 'Payment schedule';
     $('res').innerHTML = groups.map(function(g){return group(g[0],g[1])}).join('');
 
     /* payment schedule: one row per payout */
     $('schedPanel').hidden=false;
-    if(!c.sched.length){
-      $('sched').innerHTML='<tr><td colspan="10">'+c.n.toLocaleString('en-US')+' payouts. The table is not listed for more than 1,000.</td></tr>';
+    if(!sc.sched.length){
+      $('sched').innerHTML='<tr><td colspan="10">'+sc.n.toLocaleString('en-US')+' payouts. The table is not listed for more than 1,000.</td></tr>';
     } else {
-      $('sched').innerHTML = c.sched.map(function(s){
+      $('sched').innerHTML = sc.sched.map(function(s){
         var wht = s.penalty ? s.wht+s.penalty : s.wht;
         return '<tr><td>'+s.n+'</td><td>'+esc(s.when)+'</td><td>'+(s.days===null?'–':s.days)+'</td><td>'+dash(s.base)+'</td><td>'+dash(s.bonus)+
           '</td><td>'+dash(s.gross)+'</td><td>'+dash(wht)+'</td><td>'+dash(s.net)+'</td><td>'+(s.principal?m(s.principal):'–')+'</td><td>'+m(s.net+s.principal)+'</td></tr>';
       }).join('');
     }
-    $('schedNote').textContent = c.upfront ? 'The WHT column on the start date includes the upfront penalty of '+m(c.penalty)+'.'
-      : (c.periodic ? 'Each payout\'s WHT and net are rounded on their own, so the schedule total can differ from the summary net by a kobo or two.' : '');
+    $('schedNote').textContent = sc.upfront ? 'The WHT column on the start date includes the upfront penalty of '+m(sc.penalty)+'.'
+      : (sc.periodic ? 'Each payout\'s WHT and net are rounded on their own, so the schedule total can differ from the summary net by a kobo or two.' : '');
 
     setNote(notes);
     summary = 'Premium Yield Investment\n'+radio('rateType')+' | '+c.T+' '+radio('tenorType').toLowerCase()+' | '+c.pay+' | rate '+(c.rate*100).toFixed(2)+'%\n'+plain(groups);
@@ -234,7 +250,7 @@ var L = window.InvestmentLogic;
 
   document.addEventListener('input', function(e){
     var id = e.target && e.target.id;
-    if(id==='rpRate'||id==='rpRT'||id==='rpPay') touched[id]=true;
+    if(id==='rpRate'||id==='rpRT'||id==='rpPay'||id==='rpTenor') touched[id]=true;
   }, true);
   document.addEventListener('change', function(e){
     if(e.target && (e.target.id==='tuOnP'||e.target.id==='tuOnE')){ $('tuOnP').checked=e.target.checked; $('tuOnE').checked=e.target.checked; }
