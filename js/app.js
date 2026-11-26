@@ -30,12 +30,13 @@ var L = window.InvestmentLogic;
     return groups.map(function(g){return g[0]+'\n'+g[1].map(function(i){return '  '+i[0]+': '+i[1]}).join('\n')}).join('\n');
   }
   function setNote(notes){var n=$('note'); if(notes.length){n.hidden=false;n.textContent=notes.join(' ')} else n.hidden=true}
+  function addDays(d,n){ var x=new Date(Date.UTC(d.y,d.m,d.d+n)); return {y:x.getUTCFullYear(),m:x.getUTCMonth(),d:x.getUTCDate()}; }
   function fmtDate(d){
     return new Date(Date.UTC(d.y,d.m,d.d)).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'});
   }
 
   function settings(){
-    return {w:num('sWht')/100, pen:num('sPen')/100, denR:num('sDenR')||365, denF:num('sDenF')||360, dpm:num('sDpm')||30, bonus:num('sBonus'), minP:num('sMinP'), minMonths:num('sMinM'), minDays:num('sMinD')};
+    return {w:num('sWht')/100, pen:num('sPen')/100, denR:num('sDenR')||365, denF:num('sDenF')||360, dpm:num('sDpm')||30, bonus:num('sBonus'), minP:num('sMinP'), minMonths:num('sMinM'), minDays:num('sMinD'), minMonthsQ:num('sMinMQ'), minMonthsB:num('sMinMB')};
   }
 
   function syncPyi(){
@@ -59,15 +60,36 @@ var L = window.InvestmentLogic;
   function mirrorReplacement(){
     if(!touched.rpRate) $('rpRate').value = $('rate').value;
     if(!touched.rpRT) $('rpRT').value = radio('rateType');
-    if(!touched.rpTenor){ var t0=num('tenor'); $('rpTenor').value = radio('tenorType')==='Months' ? (t0>0?t0:'') : Math.max(1,Math.round(t0/30)); }
-    if(!touched.rpPay){ var p=radio('payType'); $('rpPay').value = (p==='Upfront') ? 'Maturity' : p; }
+    $('rpPay').value = radio('payType')==='Upfront' ? 'Maturity' : radio('payType');   /* must match the original */
+  }
+
+  /* New terms tab: the tenure is worked out when the original maturity is kept, and typed in when it is extended */
+  function syncTerms(mode, terms){
+    var inMonths = radio('tenorType')==='Months', field=$('rpTenor');
+    if(mode==='keep'){
+      field.readOnly = true;
+      field.value = terms.ok ? terms.tenure : '';
+      $('rpTenorLbl').textContent = 'Tenure left ('+(terms.unit==='Months'?'months':'days')+')';
+      $('rpHint').textContent = 'The original maturity is kept and the new tenure is the time left. Enter the top-up date and original maturity on the Top-up tab to count it from the dates (complete months x 30 days + leftover days). The payment type must match the original.';
+    } else {
+      if(field.readOnly){ field.readOnly=false; if(!touched.rpTenor) field.value = num('tenor')>0 ? num('tenor') : ''; }
+      if(!touched.rpTenor) field.value = num('tenor')>0 ? num('tenor') : '';
+      $('rpTenorLbl').textContent = 'New tenure ('+(inMonths?'months':'days')+')';
+      $('rpHint').textContent = 'Choose a new tenure counted from the top-up date. Maturity moves out only if this goes past the original maturity. The payment type must match the original.';
+    }
   }
 
   function renderPyi(){
     cur='₦'; syncPyi(); mirrorReplacement();
-    var on = drawerOn();
+    var on = drawerOn(), scen = radio('tuTab')==='rollover' ? 'rollover' : 'topup';   /* only the open scenario is shown */
     var c = L.pyi({P:amt('principal'), T:num('tenor'), rate:num('rate')/100, rt:radio('rateType'), tt:radio('tenorType'), pay:radio('payType'),
       S:settings(), elapsed:Math.max(0,num('tuDays')), topUp:amt('tuAmt'), after:Math.max(0,num('daysAfter')), extra:amt('roExtra'), cash:amt('roCash')});
+    var mode = radio('tuMode');
+    var terms = L.topupTerms({tt:radio('tenorType'), T:num('tenor'), elapsed:Math.max(0,num('tuDays')), pay:radio('payType'), mode:mode,
+      newTenure:num('rpTenor'), S:settings(), topDate:$('rpTopDate').value, matDate:$('rpMatDate').value});
+    syncTerms(mode, terms);
+    terms = L.topupTerms({tt:radio('tenorType'), T:num('tenor'), elapsed:Math.max(0,num('tuDays')), pay:radio('payType'), mode:mode,
+      newTenure:num('rpTenor'), S:settings(), topDate:$('rpTopDate').value, matDate:$('rpMatDate').value});
     var notes=[];
     if(!(c.P>0)) notes.push('Enter a principal above zero.');
     else if(!c.ok) notes.push(c.check+'.');
@@ -121,10 +143,11 @@ var L = window.InvestmentLogic;
     pay.push(['Investment balance at maturity',m(c.balance)],['Expected funds at maturity',m(c.funds),'','key']);
 
     var groups=[['Interest calculation',calc],['Payout schedule',pay]];
-    var rep=null, repMat=null;
+    var rep=null, repMat=null, topDate=L.parseISO($('rpTopDate').value);
 
-    if(on){
-      var t=c.tu, tuG;
+    var t=c.tu;
+    if(on && scen==='topup'){
+      var tuG;
       if(t.allowed){
         tuG=[['Top-up allowed?','Yes (investment active)'],['Days elapsed at top-up date',String(t.el)],
           ['Gross interest accrued to date',m(t.accrued)],['Interest payouts already made',String(t.made)],
@@ -136,26 +159,37 @@ var L = window.InvestmentLogic;
       groups.push(['Top-up (active, non-upfront)',tuG]);
 
       if(t.allowed){
-        var R=L.replacement({newP:t.newP, rate:num('rpRate')/100, tenure:num('rpTenor'), pay:$('rpPay').value, rt:$('rpRT').value,
-          S:settings(), topDate:$('rpTopDate').value, matDate:$('rpMatDate').value});
-        if(!R.ok){
-          groups.push(['Replacement investment',[['New principal',m(t.newP)],['Check',R.msg]]]);
-          notes.push(R.msg);
+        if(!terms.ok){
+          groups.push(['Investment after top-up',[['New principal',m(t.newP)],['Check',terms.msg]]]);
+          notes.push(terms.msg);
         } else {
-          var rg=[['New principal',m(R.newP),'','key']];
-          if(R.newMaturity) rg.push(['New maturity date',fmtDate(R.newMaturity),'','key']);
-          rg.push(['Day-count denominator',String(R.den)],['Daily interest',fmt4.format(R.daily)],['Base interest days',String(R.baseDays)],
-            ['Bonus days',String(R.bonusDays)],['Total gross interest',m(R.gross)],['Withholding tax (WHT)',minus(R.wht)],['Net interest',m(R.net),'pos'],
-            ['Number of interest payouts',String(R.n)],['Gross per regular payout',m(R.regG)],['Net on final payout',m(R.finalN)],
-            ['Expected funds at maturity',m(R.funds),'','key'],['For reference: principal + full-term net',m(R.ref)]);
-          groups.push(['Replacement investment',rg]);
-          /* the replacement investment is what the customer holds after the top-up, so it drives the headline and schedule */
-          rep = L.pyi({P:R.newP, T:num('rpTenor'), rate:num('rpRate')/100, rt:$('rpRT').value, tt:'Months', pay:$('rpPay').value,
-            S:Object.assign({},settings(),{minP:0,minMonths:0,minDays:0}), elapsed:0, topUp:0, after:0, extra:0, cash:0});
-          if(!rep.ok) rep=null; else repMat=R.newMaturity;
+          rep = L.pyi({P:t.newP, T:terms.tenure, tt:terms.unit, rate:num('rpRate')/100, rt:$('rpRT').value, pay:radio('payType'),
+            S:Object.assign({},settings(),{minP:0,minMonths:0,minDays:0,minMonthsQ:0,minMonthsB:0}), elapsed:0, topUp:0, after:0, extra:0, cash:0});
+          if(!rep.ok){
+            groups.push(['Investment after top-up',[['New principal',m(t.newP)],['Check',rep.check]]]);
+            notes.push(rep.check+'.'); rep=null;
+          } else {
+            repMat = terms.newMaturity;
+            var unitWord = terms.unit==='Months' ? (terms.tenure===1?'month':'months') : (terms.tenure===1?'day':'days');
+            var rg=[['New principal',m(rep.P),'','key']];
+            if(repMat) rg.push(['New maturity date',fmtDate(repMat),'','key']);
+            if(mode==='keep'){
+              rg.push(['Time left on the original (days)',String(terms.remainingDays)]);
+              if(terms.extendedDays>0) rg.push(['Extra days to complete the payout cycle','+ '+terms.extendedDays+' days','','key']);
+            }
+            rg.push(['New tenure',terms.tenure+' '+unitWord],['Day-count denominator',String(rep.den)],['Daily interest',fmt4.format(rep.daily)],
+              ['Base interest days',String(rep.baseDays)],['Bonus days',String(rep.bonusDays)],['Total gross interest',m(rep.gross)],
+              ['Withholding tax (WHT)',minus(rep.wht)],['Net interest',m(rep.net),'pos'],['Number of interest payouts',String(rep.n)]);
+            if(rep.periodic) rg.push(['Gross per regular payout',m(rep.regG)]);
+            rg.push(['Net on final payout',m(rep.finalN)],['Expected funds at maturity',m(rep.funds),'','key'],
+              ['For reference: principal + full-term net',m(rep.P+rep.net)]);
+            groups.push(['Investment after top-up',rg]);
+          }
         }
       }
 
+    }
+    if(on && scen==='rollover'){
       var r=c.ro;
       var roG=[['Unpaid net interest at maturity',dash(r.unpaidNet)],['Days processed after maturity',String(r.after)],
         ['Post-maturity net interest',dash(r.postN)],['Full rollover: new principal',m(r.full),'','key'],
@@ -182,12 +216,21 @@ var L = window.InvestmentLogic;
     if(!sc.sched.length){
       $('sched').innerHTML='<tr><td colspan="10">'+sc.n.toLocaleString('en-US')+' payouts. The table is not listed for more than 1,000.</td></tr>';
     } else {
+      var cum=0;
       $('sched').innerHTML = sc.sched.map(function(s){
+        if(rep){ cum += (s.days||0); s = Object.assign({}, s, {when: topDate ? fmtDate(addDays(topDate,cum)) : 'Day '+cum+' after top-up'}); }
         var wht = s.penalty ? s.wht+s.penalty : s.wht;
         return '<tr><td>'+s.n+'</td><td>'+esc(s.when)+'</td><td>'+(s.days===null?'–':s.days)+'</td><td>'+dash(s.base)+'</td><td>'+dash(s.bonus)+
           '</td><td>'+dash(s.gross)+'</td><td>'+dash(wht)+'</td><td>'+dash(s.net)+'</td><td>'+(s.principal?m(s.principal):'–')+'</td><td>'+m(s.net+s.principal)+'</td></tr>';
       }).join('');
     }
+    if(rep){
+      var firstDue = rep.periodic ? rep.sched[0].days : rep.baseDays;
+      $('schedNote').textContent = 'A new payout cycle starts on the top-up date. Interest earned on the original investment up to the top-up ('
+        +m(t.net)+' net) is added to the new principal, so no payout is due until '+(topDate?fmtDate(addDays(topDate,firstDue)):'day '+firstDue+' after the top-up')+'.'
+        +(terms.extendedDays>0?' The top-up stays for a full payout cycle, so maturity moves out by '+terms.extendedDays+' days.':'')
+        +(rep.periodic?' Each payout\'s WHT and net are rounded on their own, so the schedule total can differ from the summary net by a kobo or two.':'');
+    } else
     $('schedNote').textContent = sc.upfront ? 'The WHT column on the start date includes the upfront penalty of '+m(sc.penalty)+'.'
       : (sc.periodic ? 'Each payout\'s WHT and net are rounded on their own, so the schedule total can differ from the summary net by a kobo or two.' : '');
 
@@ -199,11 +242,12 @@ var L = window.InvestmentLogic;
     cur='$';
     var on = $('tuOnE').checked;
     var c = L.edi({P:amt('ePrincipal'), T:num('eTenor'), rate:num('eRate')/100, flat:radio('ediRate')==='Flat', w:num('eWht')/100, pen:num('ePen')/100,
-      elapsed:Math.max(0,num('eElapsed')), top:amt('eTop'), extra:amt('eExtra'), cash:amt('eCash')});
+      elapsed:Math.max(0,num('eElapsed')), top:amt('eTop'), extra:amt('eExtra'), cash:amt('eCash'), minP:num('eMinP'), minDays:num('eMinD')});
     var notes=[];
     if(!(c.P>0)) notes.push('Enter a principal above zero.');
     if(!(c.T>0)) notes.push('Enter a tenor above zero.');
     else if(c.T%1!==0) notes.push('Tenor should be a whole number of days.');
+    if(c.check!=='OK') notes.push(c.check+'.');
     $('heroLabel').textContent='Investment payable at maturity';
     $('heroVal').textContent = c.ok ? m(c.payable) : m(0);
     var meta='<span>Net interest <b>'+m(c.ok?c.net:0)+'</b></span>';
@@ -250,7 +294,7 @@ var L = window.InvestmentLogic;
 
   document.addEventListener('input', function(e){
     var id = e.target && e.target.id;
-    if(id==='rpRate'||id==='rpRT'||id==='rpPay'||id==='rpTenor') touched[id]=true;
+    if(id==='rpRate'||id==='rpRT'||(id==='rpTenor' && !$('rpTenor').readOnly)) touched[id]=true;
   }, true);
   document.addEventListener('change', function(e){
     if(e.target && (e.target.id==='tuOnP'||e.target.id==='tuOnE')){ $('tuOnP').checked=e.target.checked; $('tuOnE').checked=e.target.checked; }

@@ -143,3 +143,12 @@ input[type=date]:focus-visible,select:focus-visible{outline:3px solid var(--acce
 .prod span{white-space:nowrap}
 @media (min-width:900px) and (max-height:700px){.inputs .drawerBody{margin-top:8px;padding-top:8px}.inputs .drawer{padding:8px 12px}.seg.tabs{margin-bottom:8px}.inputs .field{margin-bottom:6px}.inputs .drawerBody .row+.row{margin-top:6px}}
 @media (min-width:900px){.prod{width:440px}.head{min-height:0}}
+/* very short windows: tighten spacing so the input panel still fits without scrolling (New terms tab has the most rows) */
+@media (min-width:900px) and (max-height:700px){
+  .wrap{padding-top:8px;padding-bottom:8px}
+  .head{margin-bottom:6px}
+  .inputs .field>label,.inputs .field>.lbl{margin-bottom:2px}
+  .inputs input[type=text],.inputs input[type=number],.inputs input[type=date],.inputs select{padding:3px 8px}
+  .inputs .seg span{padding:4px 4px}
+  .inputs .field{margin-bottom:5px}
+}

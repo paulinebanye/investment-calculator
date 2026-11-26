@@ -80,8 +80,8 @@ The calculator keeps one set of rules, applies them to every scenario, and shows
 * Maturity, Monthly, Quarterly, Biannual and Upfront interest payments
 * Payment schedule with one row per payout
 * Regular-month yearly bonus (5 days per completed year)
-* Top-up, replacement investment and rollover drawer
-* Editable product settings (WHT, penalties, denominators, bonus days)
+* Top-up (keep or extend maturity), the investment it creates, and rollover drawer
+* Editable product settings (WHT, penalties, denominators, bonus days, minimums)
 * Input validation with clear messages
 * Copy summary to clipboard
 * Landscape layout on wide screens and a single column on phones
@@ -236,12 +236,27 @@ Switch on **Include top-up and rollover** to open the drawer. It has three tabs:
 | Tab         | Use                                                                                          |
 | ----------- | -------------------------------------------------------------------------------------------- |
 | Top-up      | Days elapsed and top-up amount, with optional top-up date and original maturity date         |
-| Replacement | New rate, new tenure (months), new payment type and new rate type                            |
+| New terms   | Keep or extend the maturity, the new rate and the new rate type                              |
 | Rollover    | Days processed after maturity, extra money added and cash-out for a part rollover            |
 
 Top-up applies to active, non-upfront investments only. Rollover applies to matured investments.
 
-When a top-up is allowed and the replacement investment is valid, the headline figure and the payment schedule switch to the replacement investment (the new principal, rate, tenure and payment type). The original investment's figures stay in the breakdown, labelled "Original investment". The replacement tenure follows the original tenor until you edit it.
+The results show only the scenario for the open tab: Top-up and New terms show the top-up and the investment it creates, while Rollover shows the rollover figures. Nothing from the other scenario appears.
+
+When a top-up is allowed and the replacement investment is valid, the headline figure and the payment schedule switch to the replacement investment (the new principal, rate, tenure and payment type). The original investment's figures stay in the breakdown, labelled "Original investment". The schedule starts on the top-up date: interest earned so far is added to the new principal, so the first payout is due one payout period after the top-up. Enter the top-up date to see actual payout dates.
+
+On the **New terms** tab you choose what happens to the maturity:
+
+| Choice                    | What the calculator does                                                                                       |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Keep original maturity    | The new tenure is the time left. With the top-up date and original maturity entered, it is counted from the dates |
+| Extend maturity           | You enter a new tenure, counted from the top-up date. The maturity is the later of the original and the new date |
+
+In both cases the payment type stays the same as the original, and the tenure is in the same unit as the original (months or days).
+
+**How the time left is counted.** Each complete month counts as 30 days, plus the leftover days. Example: 25 Nov 2026 to 18 Feb 2027 is 2 complete months plus 24 days, so 84 days left.
+
+**Completing the payout cycle (always applies).** Monthly, quarterly and biannual investments run in whole payout periods (30, 90 or 180 days), and the backend does not allow anything shorter. So when a top-up keeps the original maturity, the time left is rounded up to the next whole period and the maturity moves out by the difference. Examples: a monthly investment with 10 days left stays a full 30 days (maturity +20 days); a quarterly investment with 84 days left becomes 90 days (maturity +6 days). With 60 days left on a monthly investment nothing moves.
 
 When both dates are entered, the results show the new maturity date.
 
@@ -252,6 +267,7 @@ When both dates are entered, the results show the new maturity date.
 Switch the product to **Enhanced Dollar (EDI, $)**.
 
 * Day tenor only, with interest paid at maturity
+* Minimum investment of $5 and minimum tenor of 90 days (both editable in Product settings)
 * Regular (365) or Flat (360) basis
 * Optional early liquidation, top-up and rollover drawer
 
@@ -271,10 +287,14 @@ Open **Product settings** below the results to change:
 | Minimum investment (PYI)               | ₦100,000         |
 | Minimum tenor, months (PYI)            | 3 months         |
 | Minimum tenor, days (PYI)              | 90 days          |
+| Minimum tenor, quarterly interest      | 6 months (180 days) |
+| Minimum tenor, biannual interest       | 12 months (360 days) |
 | EDI WHT rate                           | 10% (placeholder) |
 | EDI early-liquidation penalty          | 0% (placeholder)  |
+| Minimum investment (EDI)               | $5               |
+| Minimum tenor (EDI)                    | 90 days          |
 
-EDI has no minimums for now. Placeholder values are not stated in the product document. Confirm them against the product configuration.
+The upfront penalty, withholding tax and the rates are configurable in the live system. The values marked as placeholders are examples, not confirmed figures.
 
 ---
 
@@ -358,16 +378,22 @@ value carried = principal + unpaid accrued gross − WHT on it
 new principal = value carried + top-up amount
 ```
 
-Interest already paid out is excluded, and the net is rounded once.
+Interest already paid out is excluded, and the net is rounded once. There is no minimum top-up amount.
 
 ---
 
-## Replacement Investment
+## Investment After Top-up
 
-The replacement investment is priced on the new principal with the new rate, tenure and payment type.
+A top-up closes the old investment and starts a new one on the top-up date, priced on the new principal. The payment type and the tenure unit (months or days) always match the original. The rate and rate type can be changed.
+
+| Maturity choice   | New tenure                                                                  | New maturity date                                                      |
+| ----------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Keep original     | time left: complete months × 30 days plus leftover days between the top-up date and the maturity | the original maturity plus the extra days needed to finish the payout cycle |
+| Extend            | entered by the user, counted from the top-up date                           | the later of the original maturity and the top-up date plus the tenure |
 
 * expected funds = new principal + net interest on the final payout
-* new maturity date = the later of the original maturity and the top-up date plus the new tenure
+* the 5 bonus days are added in the payout that completes each year of the new investment (for example months 12 and 24)
+* when interest is paid at maturity there is no payout cycle, so the time left is used as it is
 
 ---
 
@@ -381,7 +407,8 @@ full rollover = principal + unpaid net interest + post-maturity net interest
 
 * add extra money for a rollover with extra money
 * subtract the cash-out for a part rollover
-* post-maturity interest accrues at the same daily rate, less WHT
+* post-maturity net interest = round(daily interest × extra days × (1 − WHT rate), 2): the extra days after maturity have not been paid for, so they are added once and rounded once
+* a rollover starts a new investment that the customer sets up like any new one. The calculator works out the new principal only
 
 ---
 
@@ -459,18 +486,26 @@ If a rule changes in the product spreadsheet, update the calculator and this REA
 | Minimum investment is ₦100,000              | PYI principal is below the minimum                        |
 | Minimum tenor is 3 months                   | PYI month tenor is below the minimum                      |
 | Minimum tenor is 90 days                    | PYI day tenor is below the minimum                        |
+| Minimum tenor is 6 months for quarterly interest | Quarterly interest needs at least 6 months (180 days) |
+| Minimum tenor is 12 months for biannual interest | Biannual interest needs at least 12 months (360 days) |
 | Cash-out on part rollover is more than the rollover value | Cash-out is larger than the rollover value  |
 | Days elapsed is beyond the tenor            | EDI days elapsed exceeds the tenor, so accrual stops at maturity |
+| Minimum investment is $5                    | EDI principal is below the minimum                        |
+| Minimum tenor is 90 days                    | EDI tenor is below the minimum (this message also appears for Premium Yield day tenors) |
+| New tenure must be a multiple of N months for … interest | Extend maturity with a month tenor that does not suit the payment type |
 
 ---
 
 # Known Limitations
 
-* rates are entered manually, with no rate ladder lookup by principal band and tenor
-* maturity dates are only calculated for the replacement investment, and only when both dates are entered
-* for tenors over 12 months, only one year's bonus appears in the replacement investment's final payout, as in the source spreadsheet
-* currency conversion, product minimum and maximum amounts, and top-up tenure limits are not modelled
-* interest after maturity is assumed to accrue at the same daily rate with WHT deducted, which should be confirmed for upfront investments
+* rates are typed in, with no rate table lookup (the live system picks the rate from a configurable table that has not been shared yet)
+* the latest spreadsheet no longer has a top-up sheet, so the investment after a top-up is not checked against it. It follows the rules from the product owner, listed above
+* a tenure chosen on the Extend option that is not a multiple of the payout period is blocked for month tenors. For day tenors the last payout covers the leftover days, as it does for a new day-tenor investment
+* leap years: the product owner has said customers get 6 extra days in a leap year, but the spreadsheet uses a fixed 5 bonus days and has no start date, so this is not modelled yet
+* the quarterly and biannual minimum tenors are counted in 30-day months for day tenors (180 and 360 days). This needs confirming
+* the payment-type minimums do not apply to the investment created by a top-up, which only has to complete its payout cycle
+* a rollover is not turned into a new investment: only the new principal is worked out
+* currency conversion and maximum amounts are not modelled
 * the 365-day denominator ignores leap years
 
 ---
@@ -483,12 +518,14 @@ The checks covered:
 
 * all Premium Yield scenarios (Regular and Flat, Months and Days, every payment type)
 * the repayment schedule
-* the replacement investment
+* top-up and rollover figures
 * Enhanced Dollar Investment
 
-The page layout was also checked in a real browser at desktop and phone sizes.
+The most recent run used the latest spreadsheet ("Premium Yield Investment Calculator 8"): 80 random cases, 76,035 values compared, 0 differences. The earlier spreadsheet, which still had the top-up sheet, was checked the same way: 39,528 values, 0 differences.
 
-The repository also includes automated tests for the worked examples, the minimums and the tenor rules:
+The whole page was also swept in a real browser: every rate type, tenor type and payment type, with the drawer off and on for each tab, plus Enhanced Dollar. The checks looked for broken numbers, page errors, headline figures that disagree with the schedule, and the input panel needing to scroll on short windows.
+
+The repository also includes automated tests for the worked examples, the minimums (including the quarterly and biannual ones), the top-up rules and the tenor rules:
 
 ```bash
 npm test

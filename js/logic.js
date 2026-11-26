@@ -21,6 +21,19 @@
     var dim = new Date(Date.UTC(y, mo+1, 0)).getUTCDate();
     return {y:y, m:mo, d:Math.min(dt.d, dim)};
   }
+  function addDays(dt, n){
+    var x = new Date(Date.UTC(dt.y, dt.m, dt.d + n));
+    return {y:x.getUTCFullYear(), m:x.getUTCMonth(), d:x.getUTCDate()};
+  }
+  /* Time between two dates as the product counts it: each complete month is 30 interest days, plus the leftover days.
+     25 Nov 2026 to 18 Feb 2027 = 2 complete months + 24 days = 84 days (matches the staff top-up screen). */
+  function spanDays(a, b, dpm){
+    var m = 0;
+    while(cmpDate(edate(a, m+1), b) <= 0) m++;
+    var anchor = edate(a, m);
+    var left = Math.round((Date.UTC(b.y,b.m,b.d) - Date.UTC(anchor.y,anchor.m,anchor.d)) / 86400000);
+    return m*dpm + left;
+  }
   function cmpDate(a,b){ return (a.y-b.y) || (a.m-b.m) || (a.d-b.d); }
 
   /* ---------- Premium Yield: mirrors 'Premium Yield Investment' + 'Repayment Schedule' sheets ----------
@@ -34,10 +47,14 @@
     var size = pay==='Monthly'?1 : pay==='Quarterly'?3 : pay==='Biannual'?6 : 0;
     var periodic = size>0, upfront = pay==='Upfront', dpp = size*S.dpm;
 
+    /* minimum tenor: a floor for every investment, higher for quarterly (6 months) and biannual (12 months) interest.
+       Day tenors use the same minimum counted in 30-day months (180 and 360 days). */
+    var payMin = pay==='Quarterly' ? (S.minMonthsQ||0) : pay==='Biannual' ? (S.minMonthsB||0) : 0;
+    var minM = Math.max(S.minMonths||0, payMin), minD = Math.max(S.minDays||0, payMin*S.dpm);
     var check='OK';
     if(!(T>0) || T%1!==0) check='Tenor must be a positive whole number';
-    else if(months && (S.minMonths||0)>0 && T<S.minMonths) check='Minimum tenor is '+S.minMonths+' months';
-    else if(!months && (S.minDays||0)>0 && T<S.minDays) check='Minimum tenor is '+S.minDays+' days';
+    else if(months && minM>0 && T<minM) check='Minimum tenor is '+minM+' months'+(payMin*1>(S.minMonths||0) ? ' for '+pay.toLowerCase()+' interest' : '');
+    else if(!months && minD>0 && T<minD) check='Minimum tenor is '+minD+' days'+(payMin*S.dpm>(S.minDays||0) ? ' for '+pay.toLowerCase()+' interest' : '');
     else if(months && size>1 && T%size!==0) check='Tenor must be a multiple of '+size+' months';
     else if((S.minP||0)>0 && !(P>=S.minP)) check='Minimum investment is ₦'+S.minP.toLocaleString('en-US');
 
@@ -186,10 +203,63 @@
     return r;
   }
 
+  /* ---------- Terms of the new investment that replaces the original after a top-up ----------
+     Rules from the product owner (not in the workbook):
+       - the payment type and the tenure unit (months or days) match the original investment
+       - keep the original maturity: the new tenure is the time remaining. The product owner also described rounding it
+         up to whole payout periods so every investment completes its payout cycle (10 days left on a monthly
+         investment: the top-up stays a full 30 days, maturity moves out 20 days). This always applies: the backend
+         only allows whole payout cycles (quarterly = multiples of 3 months), so a new tenure can never be shorter
+       - extend: the customer picks a new tenure, counted from the top-up date
+     o: {tt, T, elapsed, pay, mode:'keep'|'extend', newTenure, S, topDate, matDate}  (dates are ISO strings, optional) */
+  function topupTerms(o){
+    var S=o.S, months=o.tt==='Months', dpm=S.dpm;
+    var size = o.pay==='Monthly'?1 : o.pay==='Quarterly'?3 : o.pay==='Biannual'?6 : 0;
+    var period = size*dpm;
+    var baseDays = months ? o.T*dpm : o.T;
+    var el = Math.min(Math.max(o.elapsed||0,0), baseDays), remaining = baseDays-el;
+    var r = {ok:true, msg:'', mode:o.mode, remainingDays:remaining, periodDays:period, extendedDays:0,
+             unit:o.tt, tenure:0, days:0, newMaturity:null};
+    var matDate = parseISO(o.matDate), topDate = parseISO(o.topDate);
+    if(o.mode!=='extend' && topDate && matDate && cmpDate(matDate, topDate) > 0){
+      remaining = spanDays(topDate, matDate, dpm);       /* both dates entered: count the time left from the dates */
+      r.remainingDays = remaining; r.fromDates = true;
+    }
+    if(o.mode==='extend'){
+      var nt=o.newTenure;
+      if(!(nt>0) || nt%1!==0){ r.ok=false; r.msg='Enter the new tenure as a whole number of '+(months?'months':'days')+'.'; return r; }
+      if(size>1){                                   /* quarterly / biannual run in whole payout cycles: 3, 6, 9... months (90, 180, 270... days) */
+        var unitSize = months ? size : period, unitName = months ? 'months' : 'days';
+        if(nt < unitSize){ r.ok=false; r.msg='New tenure must be at least '+unitSize+' '+unitName+' for '+o.pay.toLowerCase()+' interest.'; return r; }
+        if(nt % unitSize !== 0){ r.ok=false; r.msg='New tenure must be a multiple of '+unitSize+' '+unitName+' for '+o.pay.toLowerCase()+' interest.'; return r; }
+      }
+      r.tenure=nt; r.days = months ? nt*dpm : nt;
+      if(topDate && matDate){
+        var cand = months ? edate(topDate,nt) : addDays(topDate,nt);
+        if(cmpDate(cand,matDate)<0){
+          r.ok=false; r.msg='The new maturity date cannot be earlier than the current maturity date. Choose a longer tenure, or keep the current maturity.'; return r;
+        }
+        r.newMaturity = cand;
+      }
+      return r;
+    }
+    /* keep the original maturity */
+    var days = remaining;
+    if(period>0 && remaining>0) days = Math.ceil(remaining/period)*period;   /* backend rule: quarterly/biannual/monthly investments run in whole payout cycles */
+    r.extendedDays = days-remaining; r.days = days;
+    /* express it in months only when that suits the payment type; otherwise count it in days (the last payout then covers any leftover days) */
+    if(months && days%dpm===0 && (size<=1 || (days/dpm)%size===0)){ r.unit='Months'; r.tenure=days/dpm; } else { r.unit='Days'; r.tenure=days; }
+    if(matDate) r.newMaturity = addDays(matDate, r.extendedDays);
+    return r;
+  }
+
   /* ---------- EDI: mirrors the 'EDI Investment' sheet ----------
      i: {P,T,rate,flat,w,pen,elapsed,top,extra,cash} */
   function edi(i){
     var r2=round2, P=i.P, T=i.T, w=i.w;
+    var check='OK';                                           /* minimums are product settings, not in the workbook */
+    if((i.minP||0)>0 && P>0 && P<i.minP) check='Minimum investment is $'+i.minP.toLocaleString('en-US');
+    else if((i.minDays||0)>0 && T>0 && T<i.minDays) check='Minimum tenor is '+i.minDays+' days';
     var den = i.flat ? 360 : 365, daily = P*i.rate/den;
     var gross = r2(daily*T), wht = r2(gross*w), net = r2(gross-wht), value = P+net;
     var d = Math.min(i.elapsed, T), matured = d>=T;
@@ -197,13 +267,13 @@
     var pr = matured ? 0 : i.pen, liqPen = r2(aN*pr), avail = P+aN-liqPen;
     var topMsg = matured ? 'No: only active EDI can be topped up' : 'Yes (investment active)';
     var part = i.cash>value ? 'Cash-out exceeds value' : value-i.cash;
-    return {ok:P>0&&T>0, P:P, T:T, rate:i.rate, den:den, daily:daily, gross:gross, wht:wht, net:net, value:value,
+    return {ok:P>0&&T>0&&check==='OK', check:check, P:P, T:T, rate:i.rate, den:den, daily:daily, gross:gross, wht:wht, net:net, value:value,
       balance:P+gross, payable:P+net, d:d, matured:matured, aG:aG, aW:aW, aN:aN, pr:pr, liqPen:liqPen, avail:avail,
       topAllowed:!matured, topMsg:topMsg, top:i.top, newP:P+aN+i.top, withTop:value+i.extra, part:part,
       cashOut:Math.min(i.cash,value), extra:i.extra, cash:i.cash};
   }
 
-  var api = {round2:round2, pyi:pyi, replacement:replacement, edi:edi, parseISO:parseISO, edate:edate};
+  var api = {round2:round2, pyi:pyi, replacement:replacement, topupTerms:topupTerms, edi:edi, parseISO:parseISO, edate:edate, addDays:addDays, spanDays:spanDays};
   if(typeof module!=='undefined' && module.exports) module.exports = api;   /* Node (tests) */
   else root.InvestmentLogic = api;                                          /* browser */
 

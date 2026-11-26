@@ -16,3 +16,4 @@ migrate_working_dir/
 !CMakeLists.txt
 
 tests/
+vercel.json
